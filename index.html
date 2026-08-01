@@ -207,21 +207,28 @@ input[type="month"]{width:160px}
 .tl2-item.done .tl2-dot{background:var(--ok)}
 .tl2-item.done .tl2-text{text-decoration:line-through;color:var(--text2)}
 .tl2-text{font-size:14.5px;line-height:1.55}
-/* ===== 垂直时间轴 ===== */
-.vtl{position:relative;height:624px;margin-top:8px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg)}
-.vtl-axis{position:absolute;left:0;top:0;bottom:0;width:56px;z-index:2}
+/* ===== 日历式垂直时间轴 ===== */
+.vtl{position:relative;height:624px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg)}
+.vtl-axis{position:absolute;left:0;top:0;bottom:0;width:56px;z-index:3;border-right:1px solid var(--border);background:var(--bg)}
 .vtl-h{position:absolute;right:8px;transform:translateY(-50%);font-size:10.5px;color:var(--text2);font-variant-numeric:tabular-nums}
-.vtl-body{position:absolute;left:56px;right:0;top:0;bottom:0;border-left:1px solid var(--border)}
-.vtl-line{position:absolute;left:0;right:0;height:1px;background:var(--border);opacity:.5}
-.vtl-ev{position:absolute;left:8px;right:8px;border-radius:7px;padding:2px 8px;font-size:12.5px;display:flex;gap:8px;align-items:baseline;overflow:hidden;border-left:3px solid;box-shadow:0 1px 2px rgba(0,0,0,.06);z-index:2}
-.vtl-ev .vtl-etime{font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0}
+.vtl-body{position:absolute;left:56px;right:0;top:0;bottom:0}
+.vtl-cells{position:absolute;inset:0;display:flex;flex-direction:column;z-index:0}
+.vtl-cell{flex:1;border-bottom:1px solid var(--border);opacity:.55}
+.vtl-cell:nth-child(odd){background:rgba(127,127,127,.045)}
+.vtl-half{position:absolute;left:0;right:0;border-top:1px dashed var(--border);opacity:.45;z-index:1}
+.vtl-evs{position:absolute;inset:0;z-index:2}
+.vtl-ev{position:absolute;left:10px;right:10px;border-radius:8px;padding:3px 9px;font-size:12.5px;display:flex;gap:8px;align-items:baseline;overflow:hidden;background:var(--card);border:1px solid var(--border);border-left:4px solid var(--accent);box-shadow:0 1px 4px rgba(16,24,40,.10)}
+.vtl-ev .vtl-etime{font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0;color:var(--text)}
 .vtl-etxt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.vtl-ev.t-plan{background:var(--accent-soft);border-left-color:var(--accent)}
-.vtl-ev.t-todo{background:var(--warn-soft);border-left-color:var(--warn)}
-.vtl-ev.t-todo.done{background:var(--ok-soft);border-left-color:var(--ok);text-decoration:line-through;color:var(--text2)}
-.vtl-ev.t-study{background:rgba(147,101,224,.13);border-left-color:#9365e0}
+.vtl-ev.t-plan{border-left-color:var(--accent)}
+.vtl-ev.t-todo{border-left-color:var(--warn)}
+.vtl-ev.t-todo.done{border-left-color:var(--ok);opacity:.7;text-decoration:line-through;color:var(--text2)}
+.vtl-ev.t-study{border-left-color:#9365e0}
 .vtl-now{position:absolute;left:0;right:0;height:2px;background:var(--danger);z-index:5;border-radius:2px}
-.vtl-now-tag{position:absolute;left:8px;top:-10px;background:var(--danger);color:#fff;font-size:10.5px;padding:1px 7px;border-radius:8px;font-weight:700;white-space:nowrap}
+.vtl-now::before{content:'';position:absolute;left:-6px;top:-4px;width:10px;height:10px;border-radius:50%;background:var(--danger);box-shadow:0 0 0 2px rgba(221,75,75,.25)}
+.vtl-now-tag{position:absolute;left:10px;top:-10px;background:var(--danger);color:#fff;font-size:10.5px;padding:1px 7px;border-radius:8px;font-weight:700;white-space:nowrap}
+.vtl-allday{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;background:var(--bg)}
+.vtl-ad-label{font-size:12px;color:var(--text2);font-weight:700;margin-right:2px}
 .legend{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--text2);margin-right:14px}
 .legend .lg{width:10px;height:10px;border-radius:3px;display:inline-block}
 .lg.t-plan{background:var(--accent)}
@@ -661,7 +668,8 @@ function renderTimeline(date){
 
   const minOf = t => { if (!t) return null; const [h, m] = t.split(':').map(Number); return h * 60 + m; };
   const hourLabels = Array.from({length: 24}, (_, h) => `<div class="vtl-h" style="top:${(h / 24 * 100).toFixed(2)}%">${pad(h)}:00</div>`).join('');
-  const hourLines = Array.from({length: 24}, (_, h) => `<div class="vtl-line" style="top:${(h / 24 * 100).toFixed(2)}%"></div>`).join('');
+  const hourCells = Array.from({length: 24}, () => '<div class="vtl-cell"></div>').join('');
+  const halfLines = Array.from({length: 24}, (_, h) => `<div class="vtl-half" style="top:${((h + 0.5) / 24 * 100).toFixed(2)}%"></div>`).join('');
   const now = new Date();
   const nowMin = now.getHours() * 60 + now.getMinutes();
 
@@ -700,13 +708,18 @@ function renderTimeline(date){
       <span class="legend"><i class="lg t-todo"></i>待办</span>
       <span class="legend"><i class="lg t-study"></i>学习</span>
       <span style="flex:1"></span>
-      <span style="font-size:12px;color:var(--text2)">一天 24 小时展开，红条 = 现在</span>
+      <span style="font-size:12px;color:var(--text2)">日历式一天视图，红点线 = 现在</span>
     </div>
+    ${noTime ? `<div class="vtl-allday"><span class="vtl-ad-label">全天</span>${noTime}</div>` : ''}
     ${evHtml ? `<div class="vtl">
       <div class="vtl-axis">${hourLabels}</div>
-      <div class="vtl-body">${hourLines}${evHtml}${nowLine}</div>
+      <div class="vtl-body">
+        <div class="vtl-cells">${hourCells}</div>
+        ${halfLines}
+        <div class="vtl-evs">${evHtml}</div>
+        ${nowLine}
+      </div>
     </div>` : `<div class="empty" style="padding:36px"><span class="big">⏱️</span>这一天还没有带时间的记录<br><span style="font-size:13px;color:var(--text2)">在「日计划」添加带时间的安排、给待办设时间、或在「学习」页记录时长，都会按时间出现在时间轴上</span></div>`}
-    ${noTime ? `<div style="margin-top:12px;font-size:13px;color:var(--text2)">未记时间的：${noTime}</div>` : ''}
   </div>`;
 }
 function renderDailyPlan(date){
