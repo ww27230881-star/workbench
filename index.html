@@ -207,7 +207,6 @@ input[type="month"]{width:160px}
     <div class="side-item" data-nav="todos"><span class="ico">✅</span>待办清单</div>
     <div class="side-item" data-nav="plan"><span class="ico">📅</span>日 / 周计划</div>
     <div class="side-item" data-nav="ledger"><span class="ico">💸</span>记账</div>
-    <div class="side-item" data-nav="savings"><span class="ico">🐷</span>存钱计划</div>
     <div class="side-item" data-nav="habits"><span class="ico">🔥</span>习惯养成</div>
     <div class="side-item" data-nav="study"><span class="ico">🍅</span>学习计划</div>
     <div class="side-item" data-nav="reminders"><span class="ico">⏰</span>提醒</div>
@@ -229,7 +228,6 @@ input[type="month"]{width:160px}
     <section class="tab" id="tab-todos"><div class="tab-head"><h2>✅ 待办清单</h2><p>按日期安排任务，逾期会标红提醒。</p></div><div id="body-todos"></div></section>
     <section class="tab" id="tab-plan"><div class="tab-head"><h2>📅 日 / 周计划</h2><p>日计划 = 具体时间安排；周计划 = 一周的大致目标。</p></div><div id="body-plan"></div></section>
     <section class="tab" id="tab-ledger"><div class="tab-head"><h2>💸 记账</h2><p>随手记一笔，月底知道自己钱花哪了。</p></div><div id="body-ledger"></div></section>
-    <section class="tab" id="tab-savings"><div class="tab-head"><h2>🐷 存钱计划</h2><p>设个目标，每天存一点，看着进度涨。</p></div><div id="body-savings"></div></section>
     <section class="tab" id="tab-habits"><div class="tab-head"><h2>🔥 习惯养成</h2><p>每天打卡，别让连续记录断掉。</p></div><div id="body-habits"></div></section>
     <section class="tab" id="tab-study"><div class="tab-head"><h2>🍅 学习计划</h2><p>定每周目标时长，用番茄钟专注计时。</p></div><div id="body-study"></div></section>
     <section class="tab" id="tab-reminders"><div class="tab-head"><h2>⏰ 提醒</h2><p>到点弹通知 + 响铃，治「一拿起手机就放不下」。</p></div><div id="body-reminders"></div></section>
@@ -403,7 +401,7 @@ const UI = {
 
 /* ================= 渲染 ================= */
 function renderAll(){
-  renderDashboard(); renderTodos(); renderPlan(); renderLedger(); renderSavings();
+  renderDashboard(); renderTodos(); renderPlan(); renderLedger();
   renderHabits(); renderStudy(); renderReminders(); renderSettings();
   if (UI.tab === 'dashboard') $('#page-title').textContent = '🏠 总览';
 }
@@ -411,7 +409,7 @@ function goTab(t){
   UI.tab = t;
   $$('.side-item').forEach(el => el.classList.toggle('active', el.dataset.nav === t));
   $$('.tab').forEach(el => el.classList.toggle('active', el.id === 'tab-' + t));
-  const titles = {dashboard:'🏠 总览', todos:'✅ 待办清单', plan:'📅 日 / 周计划', ledger:'💸 记账', savings:'🐷 存钱计划', habits:'🔥 习惯养成', study:'🍅 学习计划', reminders:'⏰ 提醒', settings:'⚙️ 设置 / 备份'};
+  const titles = {dashboard:'🏠 总览', todos:'✅ 待办清单', plan:'📅 日 / 周计划', ledger:'💸 记账', habits:'🔥 习惯养成', study:'🍅 学习计划', reminders:'⏰ 提醒', settings:'⚙️ 设置 / 备份'};
   $('#page-title').textContent = titles[t] || '';
 }
 /* ----- 总览 ----- */
@@ -425,12 +423,6 @@ function renderDashboard(){
   const curWk = weekKey(today);
   const wkMinutes = S.studyLog.filter(l => weekKey(l.date) === curWk).reduce((a, b) => a + b.minutes, 0);
   const wkTarget = S.subjects.reduce((a, b) => a + (b.target || 0), 0);
-  const sv = S.savings;
-  const svSaved = sv.records.reduce((a, b) => a + b.amount, 0);
-  const svPct = sv.target > 0 ? Math.min(100, svSaved / sv.target * 100) : 0;
-  let daysLeft = 0;
-  if (sv.deadline){ daysLeft = Math.max(0, Math.ceil((parseISO(sv.deadline) - new Date()) / 86400000)); }
-
   // 接下来2小时会响的提醒
   const now = new Date();
   const nowMin = now.getHours() * 60 + now.getMinutes();
@@ -453,13 +445,6 @@ function renderDashboard(){
     <div class="card"><h3>📖 本周学习</h3><div class="stat-num">${(wkMinutes/60).toFixed(1)}<small>h / ${wkTarget}h</small></div><div class="progress"><div class="fill ${wkTarget > 0 && wkMinutes/60 >= wkTarget ? 'ok' : ''}" style="width:${wkTarget > 0 ? Math.min(100, wkMinutes/60/wkTarget*100) : 0}%"></div></div></div>
   </div>
   <div class="cards">
-    <div class="card"><h3>🐷 存钱进度</h3>
-      ${sv.goal ? `<div class="stat-num">${svPct.toFixed(0)}<small>%</small></div>
-        <div class="progress"><div class="fill ${svPct >= 100 ? 'ok' : ''}" style="width:${svPct}%"></div></div>
-        <div class="hint">${money(svSaved)} / ${money(sv.target)} · ${sv.goal}${daysLeft > 0 ? ' · 剩 ' + daysLeft + ' 天' : ''}</div>
-        ${daysLeft > 0 && svSaved < sv.target ? `<div class="hint" style="color:var(--warn)">还需每天存 ${money((sv.target - svSaved) / daysLeft)}</div>` : ''}`
-      : `<div class="empty"><span class="big">🐷</span><a href="#" data-nav-jump="savings" style="color:var(--accent)">设个存钱目标 →</a></div>`}
-    </div>
     <div class="card"><h3>⏰ 接下来 2 小时</h3>
       ${upcoming.length ? upcoming.map(r => `<div class="tl-item"><span class="tl-time">${esc(r.time)}</span><span class="t">${esc(r.text)}</span></div>`).join('')
         : `<div class="empty"><span class="big">🔕</span>没有待响的提醒<br><a href="#" data-nav-jump="reminders" style="color:var(--accent)">去设置提醒 →</a></div>`}
@@ -572,7 +557,7 @@ function renderWeeklyPlan(wk, today){
   const wkData = S.week[wk] || {goal: '', days: {}};
   const days = weekDays(wk);
   const colHtml = days.map(iso => {
-    const dt = new Date(iso.split('-').map(Number).map((v, i) => i === 1 ? v - 1 : v));
+    const dt = parseISO(iso);
     const isToday = iso === today;
     const items = (wkData.days[iso] || []).map((e, i) => `
       <div class="wk-item"><span class="wt">${esc(e.time || '')}</span><span class="grow">${esc(e.text)}</span><button class="del" data-act="week-del" data-date="${iso}" data-i="${i}">✕</button></div>`).join('');
@@ -661,55 +646,6 @@ function renderLedger(){
         <div class="catbar"><span class="lb">${CAT_ICO[x.c] || ''} ${esc(x.c)}</span><span class="bar"><i style="width:${x.v / maxV * 100}%"></i></span><span class="val">${money(x.v)}</span></div>`).join('')
         : `<div class="empty"><span class="big">📊</span>本月还没有支出</div>`}
       ${S.ledger.filter(l => l.type === 'expense' && monthKey(l.date) === mk).length > 0 ? '' : ''}
-    </div>
-  </div>`;
-}
-/* ----- 存钱 ----- */
-function renderSavings(){
-  const sv = S.savings;
-  const saved = sv.records.reduce((a, b) => a + b.amount, 0);
-  const pct = sv.target > 0 ? Math.min(100, saved / sv.target * 100) : 0;
-  let daysLeft = 0;
-  if (sv.deadline){ daysLeft = Math.max(0, Math.ceil((parseISO(sv.deadline) - new Date()) / 86400000)); }
-  const needDaily = daysLeft > 0 && saved < sv.target ? (sv.target - saved) / daysLeft : 0;
-  const recs = [...sv.records].sort((a, b) => b.date.localeCompare(a.date));
-  $('#body-savings').innerHTML = sv.goal ? `
-  <div class="cards" style="grid-template-columns:1.4fr 1fr">
-    <div class="card">
-      <div class="row" style="justify-content:space-between">
-        <h3>🐷 ${esc(sv.goal)}</h3>
-        <div><button class="btn small" data-act="sav-edit">✏️ 修改</button> <button class="btn small danger" data-act="sav-reset">🗑️ 删除</button></div>
-      </div>
-      <div class="stat-num">${pct.toFixed(1)}<small>%</small></div>
-      <div class="progress"><div class="fill ${pct >= 100 ? 'ok' : ''}" style="width:${pct}%"></div></div>
-      <div class="hint">已存 ${money(saved)} / ${money(sv.target)}</div>
-      <div class="hint">${sv.deadline ? '截止 ' + sv.deadline + '（剩 ' + daysLeft + ' 天）' : '未设截止日期'}</div>
-      ${needDaily > 0 ? `<div class="hint" style="color:var(--warn)">💰 要达成目标，平均每天需存 ${money(Math.ceil(needDaily))}</div>` : (pct >= 100 ? '<div class="hint" style="color:var(--ok)">🎉 目标达成！恭喜！</div>' : '')}
-      <div class="row" style="margin-top:16px">
-        <input type="number" id="sav-amt" placeholder="存多少？" step="0.01" min="0" data-enter="#btn-sav-add">
-        <input type="date" id="sav-date" value="${todayISO()}">
-        <button class="btn primary" id="btn-sav-add" data-act="sav-add">💰 存一笔</button>
-      </div>
-    </div>
-    <div class="card">
-      <h3>📜 存款记录</h3>
-      ${recs.length ? recs.map(r => `
-        <div class="item">
-          <div class="grow"><div class="t">${money(r.amount)}</div><div class="meta">${r.date}${r.note ? ' · ' + esc(r.note) : ''}</div></div>
-          <button class="del" data-act="sav-del" data-id="${r.id}">✕</button>
-        </div>`).join('')
-        : `<div class="empty"><span class="big">💰</span>还没存过钱，今天开始第一笔？</div>`}
-    </div>
-  </div>` : `
-  <div class="card" style="max-width:520px">
-    <div class="empty"><span class="big">🐷</span>还没有存钱目标</div>
-    <div class="row">
-      <input type="text" id="sav-goal" class="grow" placeholder="目标名称，如：买 MacBook / 旅行基金" data-enter="#btn-sav-set">
-      <input type="number" id="sav-target" placeholder="目标金额 ¥" step="0.01" min="0" data-enter="#btn-sav-set">
-    </div>
-    <div class="row">
-      <input type="date" id="sav-deadline">
-      <button class="btn primary" id="btn-sav-set" data-act="sav-set">🎯 设定目标</button>
     </div>
   </div>`;
 }
@@ -1320,7 +1256,6 @@ document.addEventListener('click', e => {
     case 'daily-add': addDaily(); break;
     case 'ledger-add': addLedger(); break;
     case 'habit-add': addHabit(); break;
-    case 'sav-set': setSavingsGoal(false); break;
     case 'daily-del': { const arr = S.daily[actEl.dataset.date] || []; arr.splice(+actEl.dataset.i, 1); save(); renderPlan(); renderDashboard(); break; }
     case 'week-del': { const wk = weekKey(actEl.dataset.date); const days = S.week[wk] && S.week[wk].days; if (days && days[actEl.dataset.date]){ days[actEl.dataset.date].splice(+actEl.dataset.i, 1); save(); renderPlan(); } break; }
     case 'week-add': addWeek(actEl.dataset.date); break;
@@ -1328,11 +1263,6 @@ document.addEventListener('click', e => {
     case 'ledger-type': UI.ledgerType = actEl.dataset.t; UI.ledgerCat = UI.ledgerType === 'expense' ? '餐饮' : '生活费'; renderLedger(); break;
     case 'ledger-cat': UI.ledgerCat = actEl.dataset.c; document.querySelectorAll('#ledger-cats .cat-btn').forEach(b => b.classList.toggle('sel', b === actEl)); break;
     case 'ledger-del': { S.ledger = S.ledger.filter(x => x.id !== id); save(); renderLedger(); renderDashboard(); break; }
-
-    case 'sav-add': addSavings(); break;
-    case 'sav-del': { S.savings.records = S.savings.records.filter(x => x.id !== id); save(); renderSavings(); renderDashboard(); break; }
-    case 'sav-edit': setSavingsGoal(true); break;
-    case 'sav-reset': { if (confirm('确定删除存钱目标及其所有记录？')){ S.savings = {goal:'', target:0, deadline:'', records:[]}; save(); renderSavings(); renderDashboard(); } break; }
 
     case 'habit-cell': { const h = S.habits.find(x => x.id === id); if (h){ h.history = h.history || {}; h.history[actEl.dataset.date] = !h.history[actEl.dataset.date]; save(); renderHabits(); renderDashboard(); toast(h.history[actEl.dataset.date] ? '打卡成功 🔥' : '已取消打卡', 'ok'); } break; }
     case 'habit-del': { if (confirm('删除习惯「' + (S.habits.find(x => x.id === id) || {}).name + '」？历史打卡记录也会删除')){ S.habits = S.habits.filter(x => x.id !== id); save(); renderHabits(); renderDashboard(); } break; }
@@ -1498,37 +1428,6 @@ document.addEventListener('keydown', e => {
     if (btn) btn.click();
   }
 });
-
-// 存钱目标表单（两种模式）
-function setSavingsGoal(editMode){
-  const sv = S.savings;
-  if (!editMode){
-    const goal = $('#sav-goal').value.trim();
-    const target = parseFloat($('#sav-target').value);
-    if (!goal || !target || target <= 0){ toast('请填写目标名称和金额', 'warn'); return; }
-    sv.goal = goal; sv.target = target; sv.deadline = $('#sav-deadline').value || '';
-    save(); renderSavings(); renderDashboard();
-    toast('存钱目标已设定 🎯 加油！');
-  } else {
-    const goal = prompt('目标名称：', sv.goal);
-    if (goal === null) return;
-    const target = parseFloat(prompt('目标金额（¥）：', sv.target));
-    if (!target || target <= 0){ toast('金额无效', 'warn'); return; }
-    const deadline = prompt('截止日期（YYYY-MM-DD，可留空）：', sv.deadline);
-    if (deadline === null) return;
-    sv.goal = goal.trim(); sv.target = target; sv.deadline = deadline.trim();
-    save(); renderSavings(); renderDashboard();
-    toast('已修改 ✅');
-  }
-}
-function addSavings(){
-  const amt = parseFloat($('#sav-amt').value);
-  if (!amt || amt <= 0){ toast('请输入存款金额', 'warn'); return; }
-  S.savings.records.push({id: uid(), amount: amt, date: $('#sav-date').value || todayISO(), note: ''});
-  $('#sav-amt').value = '';
-  save(); renderSavings(); renderDashboard();
-  toast('已存入 ' + money(amt) + ' 💰');
-}
 
 /* ================= 杂项 ================= */
 function renderDaily(){
