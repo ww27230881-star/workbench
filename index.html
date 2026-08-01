@@ -229,6 +229,33 @@ input[type="month"]{width:160px}
 .vtl-now-tag{position:absolute;left:10px;top:-10px;background:var(--danger);color:#fff;font-size:10.5px;padding:1px 7px;border-radius:8px;font-weight:700;white-space:nowrap}
 .vtl-allday{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;background:var(--bg)}
 .vtl-ad-label{font-size:12px;color:var(--text2);font-weight:700;margin-right:2px}
+/* ===== 周日历时间轴 ===== */
+.wvtl{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg)}
+.wvtl-head{display:flex;border-bottom:1px solid var(--border);background:var(--bg)}
+.wvtl-axis-h{width:56px;flex-shrink:0;border-right:1px solid var(--border)}
+.wvtl-day-h{flex:1;min-width:64px;text-align:center;padding:7px 2px 6px;font-size:12px;color:var(--text2);border-left:1px solid var(--border);cursor:pointer;user-select:none}
+.wvtl-day-h:hover{background:rgba(127,127,127,.06)}
+.wvtl-day-h .wvtl-dn{display:block;font-size:15px;font-weight:800;color:var(--text);margin-top:1px}
+.wvtl-day-h.today{color:var(--accent);font-weight:700}
+.wvtl-day-h.today .wvtl-dn{color:var(--accent)}
+.wvtl-body{display:flex;height:560px;overflow-x:auto}
+.wvtl-axis{width:56px;flex-shrink:0;position:relative;border-right:1px solid var(--border);background:var(--bg);z-index:3}
+.wvtl-h{position:absolute;right:8px;transform:translateY(-50%);font-size:10.5px;color:var(--text2);font-variant-numeric:tabular-nums}
+.wvtl-cols{flex:1;display:flex;min-width:0}
+.wvtl-col{flex:1;min-width:64px;position:relative;border-left:1px solid var(--border)}
+.wvtl-col.today{background:rgba(67,120,238,.04)}
+.wvtl-cells{position:absolute;inset:0;display:flex;flex-direction:column}
+.wvtl-cell{flex:1;border-bottom:1px solid var(--border);opacity:.5}
+.wvtl-cell:nth-child(odd){background:rgba(127,127,127,.04)}
+.wvtl-evs{position:absolute;inset:0;z-index:2}
+.wvtl-ev{position:absolute;left:2px;right:2px;border-radius:5px;padding:1px 4px;font-size:10.5px;overflow:hidden;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent);box-shadow:0 1px 2px rgba(16,24,40,.08);white-space:nowrap;text-overflow:ellipsis}
+.wvtl-ev .wvtl-et{font-weight:700;margin-right:3px}
+.wvtl-ev.t-plan{border-left-color:var(--accent)}
+.wvtl-ev.t-todo{border-left-color:var(--warn)}
+.wvtl-ev.t-todo.done{border-left-color:var(--ok);opacity:.6;text-decoration:line-through}
+.wvtl-ev.t-study{border-left-color:#9365e0}
+.wvtl-now{position:absolute;left:0;right:0;height:2px;background:var(--danger);z-index:5}
+.wvtl-now::before{content:'';position:absolute;left:-4px;top:-4px;width:9px;height:9px;border-radius:50%;background:var(--danger)}
 .legend{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--text2);margin-right:14px}
 .legend .lg{width:10px;height:10px;border-radius:3px;display:inline-block}
 .lg.t-plan{background:var(--accent)}
@@ -464,6 +491,13 @@ function goTab(t){
   $('#page-title').textContent = titles[t] || '';
 }
 /* ----- 总览 ----- */
+function dayEvents(date){
+  const evts = [];
+  (S.daily[date] || []).forEach(e => evts.push({time: e.time || '', text: e.text, type: 'plan', done: false, dur: 30}));
+  S.todos.filter(t => t.date === date && t.time).forEach(t => evts.push({time: t.time, text: t.text, type: 'todo', done: t.done, dur: 30}));
+  S.studyLog.filter(l => l.date === date).forEach(l => evts.push({time: l.time || '', text: l.subj + ' · ' + l.minutes + ' 分钟', type: 'study', done: false, dur: Math.max(20, l.minutes)}));
+  return evts.sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
+}
 function renderDashboard(){
   const today = todayISO();
   const tds = S.todos.filter(t => t.date === today);
@@ -507,64 +541,65 @@ function renderDashboard(){
     ? upcoming.slice(0, 3).map(r => `<span class="badge warn" style="margin-right:6px">🕐 ${esc(r.time)} ${esc(r.text)}</span>`).join('')
     : '<span style="color:var(--text2)">接下来 2 小时没有待响提醒</span>';
 
-  // 一周时间条（周从周六开始）
+  // 周日历（周六~周五，7 列 × 24h）
   const dow0 = (new Date().getDay() + 6) % 7;
   const dayOfWeek = ((dow0 + 2) % 7) + 1; // 周六=第 1 天
-  const wkCells = wkDays.map(iso => {
+  const hourLabels = Array.from({length: 24}, (_, h) => `<div class="wvtl-h" style="top:${(h / 24 * 100).toFixed(2)}%">${pad(h)}:00</div>`).join('');
+  const cellHtml = Array.from({length: 24}, () => '<div class="wvtl-cell"></div>').join('');
+  const wkHead = wkDays.map(iso => {
     const d = parseISO(iso);
     const isToday = iso === today;
-    const tCount = S.todos.filter(t => t.date === iso && !t.done).length;
-    const pCount = (S.daily[iso] || []).length;
-    return `<div class="wk-cell ${isToday ? 'today' : ''}" data-nav-jump="plan" title="${iso} · ${tCount} 个待办 · ${pCount} 项安排">
-      <div class="wkw">周${'一二三四五六日'[d.getDay() === 0 ? 6 : d.getDay() - 1]}</div>
-      <div class="wkn">${iso.slice(8)}</div>
-      <div class="wki">${tCount ? '✅' + tCount : ''}${pCount ? ' 📋' + pCount : ''}</div>
-    </div>`;
+    return `<div class="wvtl-day-h ${isToday ? 'today' : ''}" data-nav-jump="plan" title="${iso}">周${'一二三四五六日'[d.getDay() === 0 ? 6 : d.getDay() - 1]}<span class="wvtl-dn">${iso.slice(8)}</span></div>`;
+  }).join('');
+  const wkCols = wkDays.map(iso => {
+    const isToday = iso === today;
+    const evHtml = dayEvents(iso).filter(e => e.time).map(e => {
+      const [h, m] = e.time.split(':').map(Number);
+      const top = ((h * 60 + m) / 1440 * 100).toFixed(2);
+      const hgt = Math.max((e.dur || 30) / 1440 * 100, 3.2).toFixed(2);
+      return `<div class="wvtl-ev t-${e.type} ${e.done ? 'done' : ''}" style="top:${top}%;height:${hgt}%" title="${esc(e.time)} ${esc(e.text)}"><span class="wvtl-et">${esc(e.time)}</span>${esc(e.text)}</div>`;
+    }).join('');
+    const nowLine = isToday ? `<div class="wvtl-now" style="top:${(nowMin / 1440 * 100).toFixed(2)}%"></div>` : '';
+    return `<div class="wvtl-col ${isToday ? 'today' : ''}"><div class="wvtl-cells">${cellHtml}</div><div class="wvtl-evs">${evHtml}</div>${nowLine}</div>`;
   }).join('');
 
-  // 今日待办列表
-  const todoItems = [...tds].sort((a, b) => {
-    if (a.done !== b.done) return a.done ? 1 : -1;
-    const at = a.time || '99:99', bt = b.time || '99:99';
-    if (at !== bt) return at < bt ? -1 : 1;
-    return b.createdAt - a.createdAt;
-  }).slice(0, 8).map(t => `
-    <div class="item ${t.done ? 'done' : ''}" style="padding:8px 2px">
-      <div class="chk ${t.done ? 'on' : ''}" data-act="todo-toggle" data-id="${t.id}">${t.done ? '✓' : ''}</div>
-      <div class="grow"><div class="t" style="font-size:14px">${esc(t.text)}</div></div>
-      ${t.time ? `<span class="badge gray">🕐 ${esc(t.time)}</span>` : ''}
-    </div>`).join('');
+  // 周计划摘要（每天内容）
+  const wkItemList = wkDays.map((iso, i) => ({iso, txt: ((wkData.days || {})[i + 1] || '').trim()})).filter(x => x.txt);
+  const wkSummary = wkItemList.length
+    ? wkItemList.map(x => `<div class="tl-item"><span class="tl-time">${x.iso.slice(5)}</span><span class="t">${esc(x.txt)}</span></div>`).join('')
+    : `<div class="empty" style="padding:10px"><span class="big">🗓️</span>本周还没写计划<br><a href="#" data-nav-jump="plan" style="color:var(--accent);font-size:13px">去周计划写 →</a></div>`;
 
-  const planCount = (S.daily[today] || []).length;
+  // 日计划摘要（今天）
+  const plan = S.daily[today] || [];
+  const planList = [...plan].sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99')).slice(0, 7)
+    .map(e => `<div class="tl-item"><span class="tl-time">${esc(e.time || '')}</span><span class="t">${esc(e.text)}</span></div>`).join('');
   const remCount = S.reminders.filter(r => r.enabled).length;
 
   $('#body-dashboard').innerHTML = `
   <div class="card" style="margin-bottom:14px">
     <div class="row" style="justify-content:space-between;margin-bottom:8px">
-      <h3 style="margin-bottom:0">📅 这一周（${curWk.slice(5)} 起）</h3>
-      <span class="badge gray">本周第 ${dayOfWeek}/7 天</span>
+      <h3 style="margin-bottom:0">📅 本周日历（${curWk.slice(5)} 起 · 第 ${dayOfWeek}/7 天）</h3>
+      <span style="font-size:12px;color:var(--text2);white-space:nowrap"><i class="lg t-plan"></i>安排 <i class="lg t-todo"></i>待办 <i class="lg t-study"></i>学习</span>
     </div>
-    ${wkData.goal ? `<div class="hint" style="margin-bottom:10px">🎯 本周目标：${esc(wkData.goal)}</div>` : ''}
-    <div class="wk-strip">${wkCells}</div>
-    <div class="hint" style="margin-top:12px">⏰ ${upcomingText}</div>
+    <div class="wvtl">
+      <div class="wvtl-head"><div class="wvtl-axis-h"></div>${wkHead}</div>
+      <div class="wvtl-body"><div class="wvtl-axis">${hourLabels}</div><div class="wvtl-cols">${wkCols}</div></div>
+    </div>
+    <div class="hint" style="margin-top:10px">⏰ ${upcomingText}</div>
   </div>
   <div class="cards two-col">
     <div class="card">
-      <h3>📈 计划完成</h3>
-      <div class="prow"><span class="pl">🔥 习惯</span><div class="progress"><div class="fill ${habitPct >= 100 ? 'ok' : ''}" style="width:${habitPct}%"></div></div><span class="pv">${hWk}/${hGoal}</span></div>
+      <h3>🗓️ 周计划 <a href="#" data-nav-jump="plan" style="font-size:12.5px;color:var(--accent);font-weight:400">编辑 →</a></h3>
+      ${wkData.goal ? `<div class="hint" style="margin-bottom:8px">🎯 本周目标：${esc(wkData.goal)}</div>` : ''}
+      ${wkSummary}
+      <div class="prow" style="margin-top:10px"><span class="pl">🔥 习惯</span><div class="progress"><div class="fill ${habitPct >= 100 ? 'ok' : ''}" style="width:${habitPct}%"></div></div><span class="pv">${hWk}/${hGoal}</span></div>
       <div class="prow"><span class="pl">📖 学习</span><div class="progress"><div class="fill ${studyPct >= 100 ? 'ok' : ''}" style="width:${studyPct}%"></div></div><span class="pv">${(wkMinutes/60).toFixed(1)}h/${wkTarget}h</span></div>
-      <div class="prow"><span class="pl">🗓️ 今日安排</span><span class="grow" style="font-size:13px;color:var(--text2)">${planCount} 项</span><a href="#" data-nav-jump="plan" style="font-size:13px;color:var(--accent)">查看 →</a></div>
-      <div class="prow"><span class="pl">⏰ 提醒</span><span class="grow" style="font-size:13px;color:var(--text2)">${remCount} 条启用</span><a href="#" data-nav-jump="reminders" style="font-size:13px;color:var(--accent)">管理 →</a></div>
       <div class="hint" style="margin-top:2px">${S.habits.length ? (habitsToday === S.habits.length ? '今天的习惯全部打卡，全勤 👏' : habitsToday + '/' + S.habits.length + ' 个习惯今天已打卡') : '还没有习惯，去建一个吧 →'}</div>
     </div>
     <div class="card">
-      <h3>✅ 今日待办 ${tDone}/${tds.length}${overdue ? `<span style="color:var(--danger);font-weight:600"> · ${overdue} 项逾期</span>` : ''}</h3>
-      <div class="row" style="margin-bottom:8px">
-        <input type="text" id="dash-todo-text" class="grow" placeholder="加一个今天的待办，回车添加…" data-enter="#btn-dash-todo">
-        <button class="btn primary" id="btn-dash-todo" data-act="dash-todo-add">＋</button>
-      </div>
-      ${todoItems || `<div class="empty" style="padding:14px"><span class="big">🎉</span>今天没有待办，加一个吧</div>`}
-      <div style="text-align:right;margin-top:4px"><a href="#" data-nav-jump="todos" style="font-size:13px;color:var(--accent)">全部待办 →</a></div>
+      <h3>🗓️ 日计划 <a href="#" data-nav-jump="plan" style="font-size:12.5px;color:var(--accent);font-weight:400">编辑 →</a></h3>
+      ${planList || `<div class="empty" style="padding:10px"><span class="big">🗓️</span>今天还没有安排<br><a href="#" data-nav-jump="plan" style="color:var(--accent);font-size:13px">去日计划添加 →</a></div>`}
+      <div class="hint" style="margin-top:8px">✅ 今日待办 ${tDone}/${tds.length}${overdue ? ` · <span style="color:var(--danger)">${overdue} 项逾期</span>` : ''} · <a href="#" data-nav-jump="todos" style="color:var(--accent)">去待办页 →</a></div>
     </div>
   </div>
   <div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
@@ -1444,15 +1479,6 @@ document.addEventListener('click', e => {
 
   switch (act){
     case 'todo-toggle': { const t = S.todos.find(x => x.id === id); if (t){ t.done = !t.done; save(); renderTodos(); renderDashboard(); } break; }
-    case 'dash-todo-add': {
-      const text = $('#dash-todo-text').value.trim();
-      if (!text){ toast('请输入待办内容', 'warn'); return; }
-      S.todos.push({id: uid(), text, cat: '其他', pri: '中', date: todayISO(), time: '', done: false, createdAt: Date.now()});
-      $('#dash-todo-text').value = '';
-      save(); renderDashboard();
-      toast('已添加 ✅');
-      break;
-    }
     case 'todo-del': { S.todos = S.todos.filter(x => x.id !== id); save(); renderTodos(); renderDashboard(); break; }
     case 'todo-filter': UI.todoFilter = actEl.dataset.f; renderTodos(); break;
 
