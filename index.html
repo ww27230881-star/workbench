@@ -199,6 +199,14 @@ input[type="month"]{width:160px}
 .prow .progress{flex:1;margin:0}
 .prow .pv{min-width:74px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums;font-size:13px}
 .cards.two-col{grid-template-columns:1fr 1.25fr}
+/* ===== 时间轴 ===== */
+.tl2-item{display:flex;align-items:flex-start;gap:12px;position:relative;padding-bottom:16px}
+.tl2-item:not(:last-child)::before{content:'';position:absolute;left:74px;top:13px;bottom:-2px;width:2px;background:var(--border)}
+.tl2-time{width:62px;flex-shrink:0;text-align:right;font-weight:700;color:var(--accent);font-size:13.5px;font-variant-numeric:tabular-nums;padding-top:1px}
+.tl2-dot{width:10px;height:10px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:5px;position:relative;z-index:1}
+.tl2-item.done .tl2-dot{background:var(--ok)}
+.tl2-item.done .tl2-text{text-decoration:line-through;color:var(--text2)}
+.tl2-text{font-size:14.5px;line-height:1.55}
 /* ===== Toast ===== */
 #toasts{position:fixed;right:18px;bottom:18px;z-index:99;display:flex;flex-direction:column;gap:8px;max-width:340px}
 .toast{padding:11px 16px;border-radius:12px;background:var(--card);border:1px solid var(--border);box-shadow:0 6px 20px rgba(0,0,0,.14);font-size:14px;animation:slidein .2s;transition:opacity .3s}
@@ -405,6 +413,7 @@ const UI = {
   tab: 'dashboard',
   planSub: 'daily',
   weekKey: weekKey(new Date()),
+  tlDate: todayISO(),
   dailyDate: todayISO(),
   ledgerMonth: todayISO().slice(0, 7),
   ledgerType: 'expense',
@@ -606,15 +615,56 @@ function renderPlan(){
   const dailyHtml = renderDailyPlan(today);
   const wk = UI.weekKey;
   const weeklyHtml = renderWeeklyPlan(wk, today);
+  const timelineHtml = renderTimeline(UI.tlDate || today);
   $('#body-plan').innerHTML = `
   <div class="row" style="justify-content:space-between">
     <div class="seg">
       <button class="${UI.planSub === 'daily' ? 'sel' : ''}" data-act="plan-sub" data-s="daily">日计划</button>
       <button class="${UI.planSub === 'weekly' ? 'sel' : ''}" data-act="plan-sub" data-s="weekly">周计划</button>
+      <button class="${UI.planSub === 'timeline' ? 'sel' : ''}" data-act="plan-sub" data-s="timeline">⏱️ 时间轴</button>
     </div>
   </div>
   <div id="plan-daily" style="${UI.planSub === 'daily' ? '' : 'display:none'}">${dailyHtml}</div>
-  <div id="plan-weekly" style="${UI.planSub === 'weekly' ? '' : 'display:none'}">${weeklyHtml}</div>`;
+  <div id="plan-weekly" style="${UI.planSub === 'weekly' ? '' : 'display:none'}">${weeklyHtml}</div>
+  <div id="plan-timeline" style="${UI.planSub === 'timeline' ? '' : 'display:none'}">${timelineHtml}</div>`;
+}
+function renderTimeline(date){
+  const plan = S.daily[date] || [];
+  const todos = S.todos.filter(t => t.date === date && t.time);
+  const study = S.studyLog.filter(l => l.date === date);
+  const evts = [];
+  plan.forEach(e => evts.push({time: e.time || '', text: e.text, type: 'plan', done: false}));
+  todos.forEach(t => evts.push({time: t.time, text: t.text, type: 'todo', done: t.done}));
+  study.forEach(l => evts.push({time: l.time || '', text: l.subj + ' · ' + l.minutes + ' 分钟', type: 'study', done: false}));
+  evts.sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
+  const ico = {plan: '🗓️', todo: '✅', study: '📖'};
+  const items = evts.map(e => `
+    <div class="tl2-item ${e.done ? 'done' : ''}">
+      <span class="tl2-time">${esc(e.time || '--:--')}</span>
+      <span class="tl2-dot"></span>
+      <span class="tl2-text">${ico[e.type]} ${esc(e.text)}${e.type === 'todo' && e.done ? '（完成）' : ''}</span>
+    </div>`).join('');
+  const studyMin = study.reduce((a, b) => a + b.minutes, 0);
+  const tAll = S.todos.filter(t => t.date === date).length;
+  const tDone = S.todos.filter(t => t.date === date && t.done).length;
+  return `
+  <div class="card" style="margin-bottom:14px">
+    <div class="row">
+      <button class="btn small" data-act="tl-day" data-d="-1">‹ 前一天</button>
+      <input type="date" id="tl-date" data-act="tl-date" value="${date}">
+      <button class="btn small" data-act="tl-day" data-d="1">后一天 ›</button>
+      <button class="btn small" data-act="tl-day" data-d="0">今天</button>
+      <span style="color:var(--text2);font-size:13px">${fmtDateCN(date)}</span>
+    </div>
+    <div class="row" style="margin-bottom:0">
+      <span class="badge gray">🗓️ 安排 ${plan.length}</span>
+      <span class="badge gray">✅ 待办 ${tDone}/${tAll}</span>
+      <span class="badge gray">📖 学习 ${studyMin} 分钟</span>
+    </div>
+  </div>
+  <div class="card">
+    ${items || `<div class="empty"><span class="big">⏱️</span>这一天还没有时间记录<br><span style="font-size:13px;color:var(--text2)">在「日计划」添加带时间的安排、给待办设时间、或在「学习」页记录时长，都会出现在时间轴上</span></div>`}
+  </div>`;
 }
 function renderDailyPlan(date){
   const list = S.daily[date] || [];
@@ -1189,7 +1239,7 @@ function addSubject(){
   toast('已添加科目 ✅');
 }
 function addStudyMinutes(subj, minutes, note){
-  S.studyLog.push({id: uid(), subj, minutes, date: todayISO(), note: note || ''});
+  S.studyLog.push({id: uid(), subj, minutes, date: todayISO(), note: note || '', time: new Date().toTimeString().slice(0, 5)});
   save();
 }
 function addReminder(){
@@ -1351,6 +1401,13 @@ document.addEventListener('click', e => {
     case 'todo-filter': UI.todoFilter = actEl.dataset.f; renderTodos(); break;
 
     case 'plan-sub': UI.planSub = actEl.dataset.s; renderPlan(); break;
+    case 'tl-day': {
+      const off = +actEl.dataset.d;
+      if (off === 0){ UI.tlDate = todayISO(); }
+      else { const dd = parseISO(UI.tlDate); dd.setDate(dd.getDate() + off); UI.tlDate = toISO(dd); }
+      renderPlan();
+      break;
+    }
     case 'week-nav': UI.weekKey = actEl.dataset.week; renderPlan(); break;
     case 'todo-add': addTodo(); break;
     case 'daily-add': addDaily(); break;
@@ -1480,6 +1537,7 @@ document.addEventListener('change', e => {
   if (!act) return;
   switch (act){
     case 'daily-date': renderDaily(); break;
+    case 'tl-date': { UI.tlDate = el.value; renderPlan(); break; }
     case 'ledger-month': UI.ledgerMonth = el.value; renderLedger(); break;
     case 'habit-goal': { const h = S.habits.find(x => x.id === el.dataset.id); if (h){ h.goal = +el.value; save(); renderHabits(); } break; }
     case 'subj-target': { const s = S.subjects.find(x => x.id === el.dataset.id); if (s){ s.target = parseFloat(el.value) || 0; save(); renderStudy(); renderDashboard(); } break; }
