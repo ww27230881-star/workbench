@@ -27,7 +27,9 @@ body{
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
   background:var(--bg);color:var(--text);font-size:15px;line-height:1.55;
 }
-.app{display:flex;min-height:100vh}
+.app{display:flex;min-height:100vh;position:relative;z-index:1}
+#bg-overlay{position:fixed;inset:0;pointer-events:none;z-index:0;background:var(--bgov-color,#f4f6fa);opacity:var(--bgov,.5);transition:opacity .3s}
+body.custom-bg{background-size:cover;background-position:center;background-attachment:fixed;background-repeat:no-repeat}
 /* ===== 侧边栏 ===== */
 .sidebar{
   width:216px;flex-shrink:0;background:var(--card);border-right:1px solid var(--border);
@@ -231,6 +233,7 @@ input[type="month"]{width:160px}
 </div>
 <div id="toasts"></div>
 <input type="file" id="import-file" accept=".json" style="display:none">
+<input type="file" id="bg-file-input" accept="image/*" style="display:none">
 
 <script>
 /* ================= 工具函数 ================= */
@@ -328,6 +331,14 @@ const Sync = {token: '', gistId: '', pushing: false, timer: null, dirty: false};
 const CAT_EXP = ['餐饮','交通','学习','购物','娱乐','日用','医疗','其他'];
 const CAT_INC = ['生活费','兼职','奖学金','红包','其他'];
 const CAT_ICO = {'餐饮':'🍜','交通':'🚌','学习':'📚','购物':'🛍️','娱乐':'🎮','日用':'🧻','医疗':'💊','其他':'📦','生活费':'💵','兼职':'💼','奖学金':'🎓','红包':'🧧'};
+const BG_PRESETS = {
+  '海洋': 'linear-gradient(135deg,#0f2027,#203a43,#2c5364)',
+  '森林': 'linear-gradient(135deg,#134e5e,#71b280)',
+  '日落': 'linear-gradient(135deg,#f7971e,#ffd200)',
+  '极光': 'linear-gradient(135deg,#00c6ff,#0072ff)',
+  '樱花': 'linear-gradient(135deg,#ffecd2,#fcb69f)',
+  '暮色': 'linear-gradient(160deg,#2c3e50,#4ca1af)',
+};
 function defaults(){
   return {
     todos: [],
@@ -339,7 +350,7 @@ function defaults(){
     subjects: [],     // {id,name,target}
     studyLog: [],     // {id,subj,minutes,date,note}
     reminders: [],    // {id,text,type,date,time,intervalMin,enabled,firedOn,lastFired}
-    settings: {sound:true, notify:true, dark:false, pomodoro:{focus:25, short:5}},
+    settings: {sound:true, notify:true, dark:false, pomodoro:{focus:25, short:5}, bg:{type:'none', value:'', overlay:0.5}},
   };
 }
 let S = defaults();
@@ -881,6 +892,7 @@ function renderReminders(){
 }
 /* ----- 设置 ----- */
 function renderSettings(){
+  const bg = S.settings.bg || {type:'none', value:'', overlay:0.5};
   $('#body-settings').innerHTML = `
   <div class="card" style="max-width:640px">
     <div class="set-row"><div class="lb">🔔 桌面通知<small>到点弹系统通知（需先允许）</small></div>
@@ -895,6 +907,28 @@ function renderSettings(){
         <span style="color:var(--text2)">/</span>
         <input type="number" data-act="set-pomo-break" value="${S.settings.pomodoro.short}" min="1" max="60" style="width:70px;padding:5px 8px">
       </div></div>
+  </div>
+  <div class="card" style="max-width:640px;margin-top:14px">
+    <h3 style="margin-bottom:10px">🎨 背景</h3>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:8px">预设背景（点一下即换）：</div>
+    <div class="cat-btns">
+      <button class="cat-btn ${bg.type === 'none' ? 'sel' : ''}" data-act="bg-preset" data-v="">⬜ 默认</button>
+      ${Object.keys(BG_PRESETS).map(k => `
+        <button class="cat-btn ${bg.type === 'preset' && bg.value === k ? 'sel' : ''}" data-act="bg-preset" data-v="${k}"
+          style="background:${BG_PRESETS[k]};color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4);border:none">${k}</button>`).join('')}
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" data-act="bg-upload">🖼️ 上传图片</button>
+      <input type="text" id="bg-url-input" class="grow" placeholder="或粘贴图片网址（https://... 结尾 .jpg/.png）" value="${bg.type === 'url' ? esc(bg.value) : ''}" data-enter="#btn-bg-url">
+      <button class="btn primary" id="btn-bg-url" data-act="bg-url">应用</button>
+      <button class="btn danger" data-act="bg-reset">✕ 移除背景</button>
+    </div>
+    <div class="row" style="margin-top:4px">
+      <span style="font-size:13px;color:var(--text2);white-space:nowrap">🌫️ 蒙层（文字清晰度）</span>
+      <input type="range" min="0" max="80" value="${Math.round((bg.overlay != null ? bg.overlay : 0.5) * 100)}" data-act="bg-overlay" style="flex:1;max-width:240px">
+      <span id="bg-overlay-val" style="font-size:13px;color:var(--text2);width:38px">${Math.round((bg.overlay != null ? bg.overlay : 0.5) * 100)}%</span>
+    </div>
+    <div style="font-size:12.5px;color:var(--text2)">上传的图片会自动压缩（最长边 1400px），设置会随云同步到其他设备。深色/浅色模式下蒙层颜色会自动适配。</div>
   </div>
   <div class="card" style="max-width:640px;margin-top:14px">
     <h3 style="margin-bottom:10px">💾 数据备份</h3>
@@ -1334,6 +1368,28 @@ document.addEventListener('click', e => {
       break;
     }
 
+    case 'bg-preset': {
+      const v = actEl.dataset.v || '';
+      S.settings.bg = {type: v ? 'preset' : 'none', value: v, overlay: (S.settings.bg && S.settings.bg.overlay != null) ? S.settings.bg.overlay : 0.5};
+      save(); applyBg(); renderSettings();
+      if (v) toast('背景已应用 🎨');
+      break;
+    }
+    case 'bg-upload': $('#bg-file-input').click(); break;
+    case 'bg-url': {
+      const url = $('#bg-url-input').value.trim();
+      if (!url){ toast('请粘贴图片网址', 'warn'); return; }
+      S.settings.bg = {type:'url', value:url, overlay: (S.settings.bg && S.settings.bg.overlay != null) ? S.settings.bg.overlay : 0.5};
+      save(); applyBg(); renderSettings();
+      toast('背景已应用 🎨');
+      break;
+    }
+    case 'bg-reset': {
+      S.settings.bg = {type:'none', value:'', overlay:0.5};
+      save(); applyBg(); renderSettings();
+      break;
+    }
+
     case 'export': {
       const data = {app: 'workbench', version: 1, exportedAt: new Date().toISOString(), data: S};
       const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
@@ -1368,6 +1424,15 @@ document.addEventListener('change', e => {
     case 'habit-goal': { const h = S.habits.find(x => x.id === el.dataset.id); if (h){ h.goal = +el.value; save(); renderHabits(); } break; }
     case 'subj-target': { const s = S.subjects.find(x => x.id === el.dataset.id); if (s){ s.target = parseFloat(el.value) || 0; save(); renderStudy(); renderDashboard(); } break; }
     case 'pomo-subj': UI.pomo.subj = el.value; break;
+    case 'bg-overlay': {
+      const v = +el.value / 100;
+      if (!S.settings.bg) S.settings.bg = {type:'none', value:'', overlay:0.5};
+      S.settings.bg.overlay = v;
+      save(); applyBg();
+      const lab = $('#bg-overlay-val');
+      if (lab) lab.textContent = el.value + '%';
+      break;
+    }
     case 'set-notify': S.settings.notify = el.checked; save(); break;
     case 'set-sound': S.settings.sound = el.checked; if (el.checked) alertSound(); save(); break;
     case 'set-dark': setDark(el.checked); save(); break;
@@ -1438,6 +1503,49 @@ function setDark(on){
   document.documentElement.setAttribute('data-theme', on ? 'dark' : '');
   S.settings.dark = on;
   $('#btn-dark').textContent = on ? '☀️' : '🌙';
+  applyBg();
+}
+/* ===== 背景图 ===== */
+function applyBg(){
+  const b = S.settings.bg || {};
+  const type = b.type || 'none';
+  const doc = document.documentElement;
+  doc.style.setProperty('--bgov-color', S.settings.dark ? 'rgba(12,15,23,1)' : 'rgba(244,246,250,1)');
+  doc.style.setProperty('--bgov', String(Math.min(0.85, Math.max(0, +(b.overlay != null ? b.overlay : 0.5)))));
+  const body = document.body;
+  if (type === 'none' || !b.value){
+    body.classList.remove('custom-bg');
+    body.style.backgroundImage = '';
+  } else {
+    body.classList.add('custom-bg');
+    body.style.backgroundImage = type === 'preset' ? (BG_PRESETS[b.value] || '') : ('url("' + String(b.value).replace(/"/g, '\\"') + '")');
+  }
+}
+function handleBgUpload(file){
+  if (!file || !file.type || !file.type.startsWith('image/')){ toast('请选择图片文件', 'warn'); return; }
+  toast('正在处理图片…');
+  const img = new Image();
+  const url = URL.createObjectURL(file);
+  img.onload = () => {
+    try{
+      const MAXW = 1400;
+      const scale = Math.min(1, MAXW / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      S.settings.bg = {type: 'upload', value: dataUrl, overlay: (S.settings.bg && S.settings.bg.overlay != null) ? S.settings.bg.overlay : 0.5};
+      save(); applyBg(); renderSettings();
+      toast('背景图已设置 ✅（已自动压缩，会随云同步）');
+    }catch(e){
+      toast('图片处理失败：' + e.message, 'error');
+    }finally{
+      URL.revokeObjectURL(url);
+    }
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); toast('图片读取失败，换个文件试试', 'error'); };
+  img.src = url;
 }
 function tickClock(){
   const n = new Date();
@@ -1457,6 +1565,12 @@ function init(){
     if (!document.hidden && syncEnabled()){ syncPull(true); if (Sync.dirty) syncPush(); }
   });
   $('#btn-dark').addEventListener('click', () => setDark(!S.settings.dark));
+  $('#bg-file-input').addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (f) handleBgUpload(f);
+    e.target.value = '';
+  });
+  applyBg();
   $('#import-file').addEventListener('change', e => {
     const f = e.target.files[0];
     if (!f) return;
