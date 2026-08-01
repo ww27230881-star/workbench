@@ -156,6 +156,11 @@ input[type="month"]{width:160px}
 .hg-cell.today{outline:2px solid var(--accent);outline-offset:1px;cursor:pointer;background:var(--accent-soft)}
 .hg-cell.today.on{background:var(--ok);cursor:pointer}
 .hg-cell.today:hover{opacity:.85}
+.sec-label{display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:700;color:var(--text2);margin:18px 0 10px}
+.sec-label .cnt{font-size:12px;background:var(--bg);border-radius:99px;padding:1px 9px;color:var(--text2);font-weight:600}
+.wkline{display:flex;align-items:center;gap:10px;margin:2px 0 10px}
+.wkline .progress{flex:1;margin:0}
+.wkline-txt{font-size:12.5px;color:var(--text2);white-space:nowrap;min-width:96px;text-align:right}
 /* ===== 番茄钟 ===== */
 .pomo{display:flex;flex-direction:column;align-items:center;gap:12px;padding:26px 10px;text-align:center}
 .pomo .phase{font-size:14px;color:var(--text2);letter-spacing:2px}
@@ -711,9 +716,8 @@ function renderSavings(){
 /* ----- 习惯 ----- */
 function renderHabits(){
   const today = todayISO();
-  const cards = S.habits.map(h => {
+  const card = h => {
     const history = h.history || {};
-    // 最近 28 天
     const days = [];
     for (let i = 27; i >= 0; i--){
       const d = new Date(); d.setDate(d.getDate() - i);
@@ -724,35 +728,42 @@ function renderHabits(){
       const isToday = iso === today;
       return `<div class="hg-cell ${on ? 'on' : ''} ${isToday ? 'today' : ''}" title="${iso}${on ? ' ✓' : ''}" data-act="${isToday ? 'habit-cell' : ''}" data-id="${h.id}" data-date="${iso}">${isToday && !on ? '＋' : ''}</div>`;
     }).join('');
-    // 连续天数（今天没打则从昨天算）
     let streak = 0;
     const d0 = new Date(); if (!history[today]) d0.setDate(d0.getDate() - 1);
     let cur = new Date(d0);
     while (history[toISO(cur)]){ streak++; cur.setDate(cur.getDate() - 1); }
-    // 本周
     const wkDays = weekDays(weekKey(today));
     const wkCount = wkDays.filter(iso => history[iso]).length;
+    const goal = h.goal || 1;
+    const done = wkCount >= goal;
+    const pct = Math.min(100, wkCount / goal * 100);
     return `<div class="card" style="margin-bottom:14px">
-      <div class="row" style="justify-content:space-between;margin-bottom:4px">
-        <div style="display:flex;align-items:center;gap:10px">
-          <b style="font-size:16px">${esc(h.name)}</b>
-          <span class="badge ${wkCount >= (h.goal || 1) ? 'ok' : ''}">本周 ${wkCount}/${h.goal || 1}</span>
-        </div>
+      <div class="row" style="justify-content:space-between;margin-bottom:2px">
+        <b style="font-size:16px">${esc(h.name)}</b>
         <div style="display:flex;align-items:center;gap:8px">
           <span class="badge warn" title="连续打卡天数">🔥 ${streak} 天</span>
           <button class="del" data-act="habit-del" data-id="${h.id}">✕</button>
         </div>
       </div>
+      <div class="wkline">
+        <div class="progress"><div class="fill ${done ? 'ok' : ''}" style="width:${pct}%"></div></div>
+        <span class="wkline-txt">本周 ${wkCount}/${goal}${done ? ' 🎉 达成' : (goal - wkCount) > 0 ? ' · 还差 ' + (goal - wkCount) + ' 次' : ''}</span>
+      </div>
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <div class="habit-grid">${cells}</div>
         <div style="font-size:12.5px;color:var(--text2);line-height:1.8">
           每周目标：<select data-act="habit-goal" data-id="${h.id}" style="padding:3px 6px;font-size:12.5px">
-            ${[1,2,3,4,5,6,7].map(n => `<option value="${n}" ${(h.goal || 1) === n ? 'selected' : ''}>${n} 次</option>`).join('')}
+            ${[1,2,3,4,5,6,7].map(n => `<option value="${n}" ${goal === n ? 'selected' : ''}>${n} 次</option>`).join('')}
           </select><br>点「＋」完成今天的打卡
         </div>
       </div>
     </div>`;
-  }).join('');
+  };
+  const daily = S.habits.filter(h => (h.goal || 1) >= 7);
+  const weekly = S.habits.filter(h => (h.goal || 1) < 7);
+  const sec = (ico, label, list) => list.length
+    ? `<div class="sec-label">${ico} ${label}<span class="cnt">${list.length}</span></div>` + list.map(card).join('')
+    : '';
   $('#body-habits').innerHTML = `
   <div class="card" style="margin-bottom:14px">
     <div class="row">
@@ -760,9 +771,10 @@ function renderHabits(){
       <select id="habit-goal-new"><option value="1">每周 1 次</option><option value="2">每周 2 次</option><option value="3" selected>每周 3 次</option><option value="5">每周 5 次</option><option value="7">每天</option></select>
       <button class="btn primary" id="btn-habit-add" data-act="habit-add">＋ 新建习惯</button>
     </div>
-    <div style="font-size:12.5px;color:var(--text2)">💡 习惯不在多，先坚持 1~2 个最想养成的。断了一天不要紧，明天继续就好。</div>
+    <div style="font-size:12.5px;color:var(--text2)">💡 每周目标选「每天」归到每日区，选 1~6 次归到每周区（每周一自动重新计算）。习惯不在多，先坚持 1~2 个。断一天不要紧，明天继续。</div>
   </div>
-  ${cards || `<div class="empty" style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius)"><span class="big">🔥</span>还没有习惯，建一个试试？</div>`}`;
+  ${sec('🔁', '每天打卡', daily)}${sec('📆', '每周打卡', weekly)}
+  ${!S.habits.length ? `<div class="empty" style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius)"><span class="big">🔥</span>还没有习惯，建一个试试？</div>` : ''}`;
 }
 /* ----- 学习 ----- */
 function renderStudy(){
