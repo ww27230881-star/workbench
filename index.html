@@ -50,9 +50,6 @@ body.custom-bg{background-size:cover;background-position:center;background-attac
 .side-item .ico{font-size:15px}
 /* ===== 主区域 ===== */
 main{flex:1;padding:22px 28px 80px;min-width:0}
-.topbar{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px}
-.topbar h1{font-size:22px;font-weight:800}
-.topbar .sub{color:var(--text2);font-size:13.5px;margin-top:2px}
 .top-right{display:flex;align-items:center;gap:12px;color:var(--text2);font-size:14px;margin-left:auto;flex-shrink:0}
 #clock{font-variant-numeric:tabular-nums;font-weight:700;color:var(--text);font-size:17px}
 .tab{display:none}
@@ -299,13 +296,6 @@ input[type="month"]{width:160px}
     </div>
   </header>
   <main>
-    <div class="topbar">
-      <div>
-        <h1 id="page-title">🏠 总览</h1>
-        <div class="sub" id="date-line"></div>
-      </div>
-    </div>
-
     <section class="tab active" id="tab-dashboard"><div class="tab-head"><h2>🏠 总览</h2><p>今天最重要的事，都在这里。</p></div><div id="body-dashboard"></div></section>
     <section class="tab" id="tab-todos"><div class="tab-head"><h2>✅ 待办清单</h2><p>按日期安排任务，逾期会标红提醒。</p></div><div id="body-todos"></div></section>
     <section class="tab" id="tab-plan"><div class="tab-head"><h2>📅 日 / 周计划</h2><p>日计划 = 具体时间安排；周计划 = 一周的大致目标。</p></div><div id="body-plan"></div></section>
@@ -481,14 +471,11 @@ const UI = {
 function renderAll(){
   renderDashboard(); renderTodos(); renderPlan(); renderLedger();
   renderHabits(); renderStudy(); renderReminders(); renderSettings();
-  if (UI.tab === 'dashboard') $('#page-title').textContent = '🏠 总览';
 }
 function goTab(t){
   UI.tab = t;
   $$('.side-item').forEach(el => el.classList.toggle('active', el.dataset.nav === t));
   $$('.tab').forEach(el => el.classList.toggle('active', el.id === 'tab-' + t));
-  const titles = {dashboard:'🏠 总览', todos:'✅ 待办清单', plan:'📅 日 / 周计划', ledger:'💸 记账', habits:'🔥 习惯养成', study:'🍅 学习计划', reminders:'⏰ 提醒', settings:'⚙️ 设置 / 备份'};
-  $('#page-title').textContent = titles[t] || '';
 }
 /* ----- 总览 ----- */
 function dayEvents(date){
@@ -521,12 +508,6 @@ function renderDashboard(){
   const wkMinutes = S.studyLog.filter(l => weekKey(l.date) === curWk).reduce((a, b) => a + b.minutes, 0);
   const wkTarget = S.subjects.reduce((a, b) => a + (b.target || 0), 0);
   const studyPct = wkTarget > 0 ? Math.min(100, wkMinutes / 60 / wkTarget * 100) : 0;
-
-  // 记账
-  const mk = today.slice(0, 7);
-  const mExp = S.ledger.filter(l => l.type === 'expense' && monthKey(l.date) === mk).reduce((a, b) => a + b.amount, 0);
-  const mInc = S.ledger.filter(l => l.type === 'income' && monthKey(l.date) === mk).reduce((a, b) => a + b.amount, 0);
-  const tExp = S.ledger.filter(l => l.type === 'expense' && l.date === today).reduce((a, b) => a + b.amount, 0);
 
   // 接下来2小时会响的提醒
   const now = new Date();
@@ -602,12 +583,6 @@ function renderDashboard(){
       <div class="hint" style="margin-top:8px">✅ 今日待办 ${tDone}/${tds.length}${overdue ? ` · <span style="color:var(--danger)">${overdue} 项逾期</span>` : ''} · <a href="#" data-nav-jump="todos" style="color:var(--accent)">去待办页 →</a></div>
     </div>
   </div>
-  <div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
-    <div class="card"><h3>💸 今日支出</h3><div class="stat-num" style="color:var(--danger)">${money(tExp)}</div></div>
-    <div class="card"><h3>📉 本月支出</h3><div class="stat-num" style="color:var(--danger)">${money(mExp)}</div><div class="hint"><a href="#" data-nav-jump="ledger" style="color:var(--accent)">明细 →</a></div></div>
-    <div class="card"><h3>📈 本月收入</h3><div class="stat-num" style="color:var(--ok)">${money(mInc)}</div></div>
-    <div class="card"><h3>⚖️ 本月结余</h3><div class="stat-num" style="color:${mInc - mExp >= 0 ? 'var(--ok)' : 'var(--danger)'}">${money(mInc - mExp)}</div></div>
-  </div>
   <div class="card">
     <h3>⚡ 快捷操作</h3>
     <div class="row" style="margin-bottom:0">
@@ -667,6 +642,7 @@ function renderTodos(){
         <button class="${UI.todoFilter === 'all' ? 'sel' : ''}" data-act="todo-filter" data-f="all">全部</button>
         <button class="${UI.todoFilter === 'done' ? 'sel' : ''}" data-act="todo-filter" data-f="done">已完成</button>
       </div>
+      <button class="btn small" data-act="todo-tomorrow" title="把今天及之前没做完的待办，日期改成明天" style="margin-left:auto">⏭ 未完成移到明天</button>
     </div>
     ${items || `<div class="empty"><span class="big">🎉</span>${UI.todoFilter === 'done' ? '还没有完成的任务' : '没有任务，先加一个吧'}</div>`}
   </div>`;
@@ -760,6 +736,16 @@ function renderTimeline(date){
 function renderDailyPlan(date){
   const list = S.daily[date] || [];
   const sorted = [...list].sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
+  const todosOfDay = S.todos.filter(t => t.date === date);
+  const tDone = todosOfDay.filter(t => t.done).length;
+  const todoHtml = todosOfDay.length ? todosOfDay.map(t => `
+    <div class="item ${t.done ? 'done' : ''}" style="padding:7px 2px">
+      <div class="chk ${t.done ? 'on' : ''}" data-act="todo-toggle" data-id="${t.id}">${t.done ? '✓' : ''}</div>
+      <div class="grow"><div class="t" style="font-size:14px">${esc(t.text)}</div></div>
+      ${t.time ? `<span class="badge gray">🕐 ${esc(t.time)}</span>` : ''}
+      <button class="del" data-act="todo-del" data-id="${t.id}">✕</button>
+    </div>`).join('')
+    : `<div class="empty" style="padding:8px"><span class="big">✅</span>这一天没有待办</div>`;
   return `
   <div class="card" style="margin-bottom:14px">
     <div class="row">
@@ -778,6 +764,10 @@ function renderDailyPlan(date){
         <button class="del" data-act="daily-del" data-date="${date}" data-i="${i}">✕</button>
       </div>`).join('')
       : `<div class="empty"><span class="big">🗓️</span>这一天还没有安排</div>`}
+    <div style="margin-top:14px;border-top:1px dashed var(--border);padding-top:12px">
+      <h3 style="font-size:13.5px;color:var(--text2);margin-bottom:6px">✅ 待办 ${tDone}/${todosOfDay.length}</h3>
+      ${todoHtml}
+    </div>
   </div>`;
 }
 function renderWeeklyPlan(wk, today){
@@ -831,7 +821,7 @@ function renderLedger(){
   const cats = CAT_EXP.map(c => ({c, v: monthList.filter(l => l.type === 'expense' && l.cat === c).reduce((a, b) => a + b.amount, 0)}))
     .filter(x => x.v > 0).sort((a, b) => b.v - a.v);
   const maxV = Math.max(1, ...cats.map(x => x.v));
-  const recent = [...S.ledger].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)).slice(0, 15);
+  const todayList = [...S.ledger].filter(l => l.date === today).sort((a, b) => b.id.localeCompare(a.id));
   const catsList = UI.ledgerType === 'expense' ? CAT_EXP : CAT_INC;
   $('#body-ledger').innerHTML = `
   <div class="cards">
@@ -849,30 +839,32 @@ function renderLedger(){
         </div>
         <input type="number" id="ledger-amt" placeholder="金额" step="0.01" min="0" data-enter="#btn-ledger-add">
         <input type="text" id="ledger-note" placeholder="备注（可选）" data-enter="#btn-ledger-add">
-        <input type="date" id="ledger-date" value="${today}">
         <button class="btn primary" id="btn-ledger-add" data-act="ledger-add">＋ 记一笔</button>
       </div>
+      <div style="font-size:12.5px;color:var(--text2);margin:2px 0 8px">📌 只记当天的账（${today}），月底自动汇总</div>
       <div class="cat-btns" id="ledger-cats">
         ${catsList.map(c => `<button class="cat-btn ${UI.ledgerCat === c ? 'sel' : ''}" data-act="ledger-cat" data-c="${c}">${CAT_ICO[c] || '📦'} ${c}</button>`).join('')}
       </div>
       <div style="margin-top:14px">
-        <h3 style="font-size:13.5px;color:var(--text2);margin-bottom:6px">最近记录</h3>
-        ${recent.length ? recent.map(l => `
+        <h3 style="font-size:13.5px;color:var(--text2);margin-bottom:6px">📅 今日记录</h3>
+        ${todayList.length ? todayList.map(l => `
           <div class="item">
             <div class="lg-ico">${CAT_ICO[l.cat] || '📦'}</div>
-            <div class="grow"><div class="t">${esc(l.cat)}${l.note ? ' · ' + esc(l.note) : ''}</div><div class="meta">${l.date}</div></div>
+            <div class="grow"><div class="t">${esc(l.cat)}${l.note ? ' · ' + esc(l.note) : ''}</div><div class="meta">${l.type === 'expense' ? '支出' : '收入'}</div></div>
             <div class="amt ${l.type}">${l.type === 'expense' ? '-' : '+'}${money(l.amount)}</div>
             <button class="del" data-act="ledger-del" data-id="${l.id}">✕</button>
           </div>`).join('')
-          : `<div class="empty"><span class="big">🧾</span>还没有记录，随手记第一笔吧</div>`}
+          : `<div class="empty"><span class="big">🧾</span>今天还没有记账，随手记第一笔吧</div>`}
       </div>
     </div>
     <div class="card">
-      <h3>🗂️ 分类支出 <input type="month" data-act="ledger-month" value="${mk}" style="width:130px;padding:5px 8px;font-size:13px;margin-left:6px"></h3>
-      ${cats.length ? cats.map(x => `
-        <div class="catbar"><span class="lb">${CAT_ICO[x.c] || ''} ${esc(x.c)}</span><span class="bar"><i style="width:${x.v / maxV * 100}%"></i></span><span class="val">${money(x.v)}</span></div>`).join('')
-        : `<div class="empty"><span class="big">📊</span>本月还没有支出</div>`}
-      ${S.ledger.filter(l => l.type === 'expense' && monthKey(l.date) === mk).length > 0 ? '' : ''}
+      <h3>🗂️ 月度总结 <input type="month" data-act="ledger-month" value="${mk}" style="width:130px;padding:5px 8px;font-size:13px;margin-left:6px"></h3>
+      <div class="prow"><span class="pl">支出</span><div class="progress"><div class="fill" style="width:${exp ? 100 : 0}%"></div></div><span class="pv">${money(exp)}</span></div>
+      <div class="prow"><span class="pl">收入</span><div class="progress"><div class="fill ok" style="width:${inc ? 100 : 0}%"></div></div><span class="pv">${money(inc)}</span></div>
+      <div class="prow"><span class="pl">结余</span><span class="grow" style="font-weight:700;color:${inc - exp >= 0 ? 'var(--ok)' : 'var(--danger)'}">${money(inc - exp)}</span><a href="#" data-nav-jump="ledger" style="font-size:12.5px;color:var(--accent)"></a></div>
+      ${cats.length ? `<div style="margin-top:6px">${cats.map(x => `
+        <div class="catbar"><span class="lb">${CAT_ICO[x.c] || ''} ${esc(x.c)}</span><span class="bar"><i style="width:${x.v / maxV * 100}%"></i></span><span class="val">${money(x.v)}</span></div>`).join('')}</div>`
+        : `<div class="empty" style="margin-top:6px"><span class="big">📊</span>本月还没有支出</div>`}
     </div>
   </div>`;
 }
@@ -1305,7 +1297,7 @@ function addLedger(){
   if (!amt || amt <= 0){ toast('请输入有效金额', 'warn'); return; }
   S.ledger.push({
     id: uid(), type: UI.ledgerType, amount: amt, cat: UI.ledgerCat,
-    note: $('#ledger-note').value.trim(), date: $('#ledger-date').value || todayISO(),
+    note: $('#ledger-note').value.trim(), date: todayISO(),
   });
   $('#ledger-amt').value = ''; $('#ledger-note').value = '';
   save(); renderLedger(); renderDashboard();
@@ -1481,6 +1473,15 @@ document.addEventListener('click', e => {
     case 'todo-toggle': { const t = S.todos.find(x => x.id === id); if (t){ t.done = !t.done; save(); renderTodos(); renderDashboard(); } break; }
     case 'todo-del': { S.todos = S.todos.filter(x => x.id !== id); save(); renderTodos(); renderDashboard(); break; }
     case 'todo-filter': UI.todoFilter = actEl.dataset.f; renderTodos(); break;
+    case 'todo-tomorrow': {
+      const tm = new Date(); tm.setDate(tm.getDate() + 1);
+      const tmIso = toISO(tm);
+      let n = 0;
+      S.todos.forEach(t => { if (!t.done && t.date <= todayISO()){ t.date = tmIso; n++; } });
+      if (n){ save(); renderTodos(); renderDashboard(); toast('已把 ' + n + ' 条未完成移到明天 ⏭'); }
+      else { toast('今天没有需要顺延的待办'); }
+      break;
+    }
 
     case 'plan-sub': UI.planSub = actEl.dataset.s; renderPlan(); break;
     case 'tl-day': {
@@ -1773,7 +1774,6 @@ function tickClock(){
 function init(){
   load();
   if (S.settings.dark) setDark(true); else setDark(false);
-  $('#date-line').textContent = fmtDateCN(todayISO()) + ' · 今天是新的一天，加油 💪';
   renderAll();
   tickClock();
   setInterval(tickClock, 1000);
