@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚡ 效率工作台</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f2f4f9; --card:#ffffff; --text:#1d2433; --text2:#677084;
+  --border:#e3e7f0; --accent:#4f6ef7; --accent-soft:#edf0fe;
+  --ok:#1f9d63; --ok-soft:#e5f6ee; --warn:#dd9a2b; --warn-soft:#fdf3e0;
+  --danger:#dd4b4b; --danger-soft:#fdeaea;
+  --radius:14px; --shadow:0 1px 3px rgba(16,24,40,.06);
+}
+html[data-theme="dark"]{
+  --bg:#11141d; --card:#1a1f2c; --text:#e7eaf2; --text2:#98a1b4;
+  --border:#2a3145; --accent:#7188ff; --accent-soft:#232b49;
+  --ok:#2eae76; --ok-soft:#14382a; --warn:#e0a848; --warn-soft:#3a2f17;
+  --danger:#e26060; --danger-soft:#3d1f22;
+  --shadow:0 1px 3px rgba(0,0,0,.35);
+}
+html{color-scheme:light}
+html[data-theme="dark"]{color-scheme:dark}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
+  background:var(--bg);color:var(--text);font-size:15px;line-height:1.55;
+}
+.app{display:flex;min-height:100vh}
+/* ===== 侧边栏 ===== */
+.sidebar{
+  width:216px;flex-shrink:0;background:var(--card);border-right:1px solid var(--border);
+  padding:16px 12px;position:sticky;top:0;height:100vh;overflow-y:auto;
+}
+.logo{font-size:19px;font-weight:800;padding:6px 10px 18px;letter-spacing:.5px}
+.logo small{display:block;font-size:11px;font-weight:400;color:var(--text2);margin-top:2px}
+.side-item{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;
+  cursor:pointer;color:var(--text2);font-size:14.5px;margin-bottom:2px;user-select:none;
+  transition:background .15s,color .15s;white-space:nowrap;
+}
+.side-item:hover{background:var(--bg);color:var(--text)}
+.side-item.active{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.side-item .ico{font-size:17px;width:22px;text-align:center}
+/* ===== 主区域 ===== */
+main{flex:1;padding:22px 28px 80px;min-width:0}
+.topbar{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+.topbar h1{font-size:22px;font-weight:800}
+.topbar .sub{color:var(--text2);font-size:13.5px;margin-top:2px}
+.top-right{display:flex;align-items:center;gap:12px;color:var(--text2);font-size:14px}
+#clock{font-variant-numeric:tabular-nums;font-weight:700;color:var(--text);font-size:17px}
+.tab{display:none}
+.tab.active{display:block;animation:fadein .18s ease}
+@keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.tab-head{margin-bottom:16px}
+.tab-head h2{font-size:19px;font-weight:800;display:flex;align-items:center;gap:8px}
+.tab-head p{color:var(--text2);font-size:13px;margin-top:3px}
+/* ===== 卡片 ===== */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow)}
+.card h3{font-size:13.5px;color:var(--text2);font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.stat-num{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
+.stat-num small{font-size:13px;color:var(--text2);font-weight:500}
+.card .hint{font-size:12.5px;color:var(--text2);margin-top:4px}
+.progress{height:8px;background:var(--border);border-radius:99px;overflow:hidden;margin:10px 0 6px}
+.progress .fill{height:100%;background:var(--accent);border-radius:99px;transition:width .4s}
+.progress .fill.ok{background:var(--ok)} .progress .fill.warn{background:var(--warn)}
+/* ===== 按钮 ===== */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--card);
+  color:var(--text);padding:8px 14px;border-radius:10px;cursor:pointer;font-size:14px;transition:.15s;
+}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{opacity:.88;color:#fff}
+.btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+.btn.ok:hover{border-color:var(--ok);color:var(--ok)}
+.btn.small{padding:4px 10px;font-size:12.5px;border-radius:8px}
+.btn.ghost{background:transparent}
+/* ===== 表单 ===== */
+input,select,textarea{
+  font:inherit;color:var(--text);background:var(--card);border:1px solid var(--border);
+  border-radius:10px;padding:9px 12px;outline:none;transition:border .15s;max-width:100%;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+input[type="number"]{width:130px}
+input[type="time"],input[type="date"]{width:150px}
+input[type="month"]{width:160px}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.grow{flex:1;min-width:180px}
+/* ===== 列表项 ===== */
+.item{display:flex;align-items:center;gap:12px;padding:11px 4px;border-bottom:1px solid var(--border)}
+.item:last-child{border-bottom:none}
+.item .t{font-size:15px}
+.item .meta{font-size:12.5px;color:var(--text2);margin-top:3px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.item.done .t{text-decoration:line-through;color:var(--text2)}
+.chk{
+  width:21px;height:21px;border-radius:50%;border:2px solid var(--border);cursor:pointer;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;transition:.15s;
+}
+.chk:hover{border-color:var(--ok)}
+.chk.on{background:var(--ok);border-color:var(--ok)}
+.badge{font-size:12px;padding:1px 9px;border-radius:99px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.badge.warn{background:var(--warn-soft);color:var(--warn)}
+.badge.danger{background:var(--danger-soft);color:var(--danger)}
+.badge.ok{background:var(--ok-soft);color:var(--ok)}
+.badge.gray{background:var(--bg);color:var(--text2)}
+.pri{width:9px;height:9px;border-radius:50%;display:inline-block;flex-shrink:0}
+.pri.h{background:var(--danger)} .pri.m{background:var(--warn)} .pri.l{background:var(--ok)}
+.del{cursor:pointer;color:var(--text2);padding:4px 8px;border-radius:8px;font-size:13px;background:none;border:none}
+.del:hover{background:var(--danger-soft);color:var(--danger)}
+.empty{color:var(--text2);text-align:center;padding:30px 10px;font-size:14px}
+.empty .big{font-size:34px;display:block;margin-bottom:8px}
+/* ===== 分段导航 ===== */
+.seg{display:inline-flex;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:3px;gap:3px}
+.seg button{border:none;background:transparent;padding:6px 16px;border-radius:8px;cursor:pointer;color:var(--text2);font-size:14px}
+.seg button.sel{background:var(--card);color:var(--accent);font-weight:600;box-shadow:var(--shadow)}
+/* ===== 分类按钮 ===== */
+.cat-btns{display:flex;flex-wrap:wrap;gap:8px}
+.cat-btn{border:1px solid var(--border);padding:6px 14px;border-radius:99px;cursor:pointer;font-size:13px;background:var(--card);transition:.12s}
+.cat-btn.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
+/* ===== 周计划 ===== */
+.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-top:12px}
+.day-col{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;min-height:230px;display:flex;flex-direction:column}
+.day-col.today{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.day-col .dh{font-weight:700;font-size:14px;margin-bottom:2px;display:flex;justify-content:space-between;align-items:center}
+.day-col .dh small{color:var(--text2);font-weight:400}
+.day-col .wk-add{display:flex;gap:5px;margin-top:8px}
+.day-col .wk-add input[type="text"]{flex:1;min-width:0;padding:6px 8px;font-size:13px}
+.day-col .wk-add input[type="time"]{width:86px;padding:6px 4px;font-size:12px}
+.day-col .wk-add button{padding:6px 9px}
+.day-items{flex:1;overflow:auto;max-height:320px}
+.wk-item{display:flex;align-items:center;gap:6px;padding:6px 2px;border-bottom:1px dashed var(--border);font-size:13.5px}
+.wk-item .wt{color:var(--accent);font-weight:600;font-size:12px;flex-shrink:0}
+/* ===== 时间线 ===== */
+.tl-item{display:flex;gap:14px;padding:9px 0;border-bottom:1px dashed var(--border);align-items:baseline}
+.tl-item:last-child{border-bottom:none}
+.tl-time{width:66px;font-weight:700;color:var(--accent);font-size:13.5px;flex-shrink:0;font-variant-numeric:tabular-nums}
+.tl-item .t{font-size:14.5px}
+/* ===== 记账 ===== */
+.lg-ico{width:38px;height:38px;border-radius:12px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.amt{font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.amt.exp{color:var(--danger)} .amt.inc{color:var(--ok)}
+.catbar{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:13.5px}
+.catbar .lb{width:56px;flex-shrink:0;color:var(--text2)}
+.catbar .bar{flex:1;height:7px;background:var(--border);border-radius:99px;overflow:hidden}
+.catbar .bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.catbar .val{width:70px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+/* ===== 习惯 ===== */
+.habit-grid{display:grid;grid-template-columns:repeat(7,20px);gap:4px;margin-top:10px}
+.hg-cell{width:20px;height:20px;border-radius:5px;background:var(--border);position:relative}
+.hg-cell.on{background:var(--ok)}
+.hg-cell.today{outline:2px solid var(--accent);outline-offset:1px;cursor:pointer;background:var(--accent-soft)}
+.hg-cell.today.on{background:var(--ok);cursor:pointer}
+.hg-cell.today:hover{opacity:.85}
+/* ===== 番茄钟 ===== */
+.pomo{display:flex;flex-direction:column;align-items:center;gap:12px;padding:26px 10px;text-align:center}
+.pomo .phase{font-size:14px;color:var(--text2);letter-spacing:2px}
+.pomo .phase b{color:var(--accent)}
+.pomo .big-time{font-size:60px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:3px;line-height:1.1}
+.pomo .big-time.break{color:var(--ok)}
+.pomo-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+/* ===== 提醒 ===== */
+.rem-msg{background:var(--warn-soft);border:1px solid var(--warn);color:var(--warn);border-radius:12px;padding:12px 14px;font-size:13.5px;margin-bottom:14px}
+.rem-msg b{color:var(--text)}
+/* ===== 设置 ===== */
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 2px;border-bottom:1px solid var(--border)}
+.set-row:last-child{border-bottom:none}
+.set-row .lb{font-size:14.5px}
+.set-row .lb small{display:block;color:var(--text2);font-size:12.5px;margin-top:2px}
+.switch{position:relative;width:44px;height:24px;flex-shrink:0}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;background:var(--border);border-radius:99px;transition:.2s;cursor:pointer}
+.slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.switch input:checked + .slider{background:var(--accent)}
+.switch input:checked + .slider:before{transform:translateX(20px)}
+/* ===== Toast ===== */
+#toasts{position:fixed;right:18px;bottom:18px;z-index:99;display:flex;flex-direction:column;gap:8px;max-width:340px}
+.toast{padding:11px 16px;border-radius:12px;background:var(--card);border:1px solid var(--border);box-shadow:0 6px 20px rgba(0,0,0,.14);font-size:14px;animation:slidein .2s;transition:opacity .3s}
+.toast.ok{border-left:4px solid var(--ok)} .toast.error{border-left:4px solid var(--danger)} .toast.warn{border-left:4px solid var(--warn)}
+@keyframes slidein{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+/* ===== 响应式 ===== */
+@media(max-width:920px){
+  .app{flex-direction:column}
+  .sidebar{width:100%;height:auto;position:static;display:flex;gap:4px;overflow-x:auto;padding:10px 12px;border-right:none;border-bottom:1px solid var(--border)}
+  .logo{display:none}
+  .side-item{flex-shrink:0;font-size:13.5px;padding:8px 11px}
+  main{padding:16px 14px 90px}
+  .week-grid{grid-template-columns:1fr}
+  .day-col{min-height:auto}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo">⚡ 效率工作台<small>计划 · 记账 · 习惯 · 提醒</small></div>
+    <div class="side-item active" data-nav="dashboard"><span class="ico">🏠</span>总览</div>
+    <div class="side-item" data-nav="todos"><span class="ico">✅</span>待办清单</div>
+    <div class="side-item" data-nav="plan"><span class="ico">📅</span>日 / 周计划</div>
+    <div class="side-item" data-nav="ledger"><span class="ico">💸</span>记账</div>
+    <div class="side-item" data-nav="savings"><span class="ico">🐷</span>存钱计划</div>
+    <div class="side-item" data-nav="habits"><span class="ico">🔥</span>习惯养成</div>
+    <div class="side-item" data-nav="study"><span class="ico">🍅</span>学习计划</div>
+    <div class="side-item" data-nav="reminders"><span class="ico">⏰</span>提醒</div>
+    <div class="side-item" data-nav="settings"><span class="ico">⚙️</span>设置 / 备份</div>
+  </aside>
+  <main>
+    <div class="topbar">
+      <div>
+        <h1 id="page-title">🏠 总览</h1>
+        <div class="sub" id="date-line"></div>
+      </div>
+      <div class="top-right">
+        <span id="clock">--:--:--</span>
+        <button class="btn small" id="btn-dark" title="切换深色模式">🌙</button>
+      </div>
+    </div>
+
+    <section class="tab active" id="tab-dashboard"><div class="tab-head"><h2>🏠 总览</h2><p>今天最重要的事，都在这里。</p></div><div id="body-dashboard"></div></section>
+    <section class="tab" id="tab-todos"><div class="tab-head"><h2>✅ 待办清单</h2><p>按日期安排任务，逾期会标红提醒。</p></div><div id="body-todos"></div></section>
+    <section class="tab" id="tab-plan"><div class="tab-head"><h2>📅 日 / 周计划</h2><p>日计划 = 具体时间安排；周计划 = 一周的大致目标。</p></div><div id="body-plan"></div></section>
+    <section class="tab" id="tab-ledger"><div class="tab-head"><h2>💸 记账</h2><p>随手记一笔，月底知道自己钱花哪了。</p></div><div id="body-ledger"></div></section>
+    <section class="tab" id="tab-savings"><div class="tab-head"><h2>🐷 存钱计划</h2><p>设个目标，每天存一点，看着进度涨。</p></div><div id="body-savings"></div></section>
+    <section class="tab" id="tab-habits"><div class="tab-head"><h2>🔥 习惯养成</h2><p>每天打卡，别让连续记录断掉。</p></div><div id="body-habits"></div></section>
+    <section class="tab" id="tab-study"><div class="tab-head"><h2>🍅 学习计划</h2><p>定每周目标时长，用番茄钟专注计时。</p></div><div id="body-study"></div></section>
+    <section class="tab" id="tab-reminders"><div class="tab-head"><h2>⏰ 提醒</h2><p>到点弹通知 + 响铃，治「一拿起手机就放不下」。</p></div><div id="body-reminders"></div></section>
+    <section class="tab" id="tab-settings"><div class="tab-head"><h2>⚙️ 设置 / 备份</h2><p>提醒设置、主题、数据备份。</p></div><div id="body-settings"></div></section>
+  </main>
+</div>
+<div id="toasts"></div>
+<input type="file" id="import-file" accept=".json" style="display:none">
+
+<script>
+/* ================= 工具函数 ================= */
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const pad = n => String(n).padStart(2, '0');
+const toISO = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const todayISO = () => toISO(new Date());
+const monthKey = iso => iso.slice(0, 7);
+const money = n => '¥' + (Math.round(n * 100) / 100).toLocaleString('zh-CN');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const WD = ['周日','周一','周二','周三','周四','周五','周六'];
+function weekKey(iso){
+  if (iso instanceof Date) iso = toISO(iso);
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() - (dt.getDay() + 6) % 7 + 3); // 移到本周四
+  const year = dt.getFullYear();
+  const jan1 = new Date(year, 0, 1);
+  const wk = Math.ceil((((dt - jan1) / 86400000) + jan1.getDay() + 1) / 7);
+  return year + '-W' + pad(wk);
+}
+function parseISO(iso){ const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d); }
+function weekDays(wk){ // '2026-W31' -> 7 个 ISO 日期，周一到周日
+  const m = wk.match(/^(\d{4})-W(\d{2})$/); if (!m) return [];
+  const jan4 = new Date(+m[1], 0, 4);
+  jan4.setDate(jan4.getDate() - (jan4.getDay() + 6) % 7 + (+m[2] - 1) * 7);
+  return Array.from({length: 7}, (_, i) => { const d = new Date(jan4); d.setDate(d.getDate() + i); return toISO(d); });
+}
+function fmtDateCN(iso){
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  return (y + '年' + m + '月' + d + '日 ' + WD[dt.getDay()]);
+}
+
+/* ================= Toast / 声音 / 通知 ================= */
+function toast(msg, type = 'ok'){
+  const c = $('#toasts');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 350); }, 3200);
+}
+let actx = null;
+function beep(freq, dur, when){
+  try{
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = 'sine'; o.frequency.value = freq;
+    o.connect(g); g.connect(actx.destination);
+    const t = actx.currentTime + when;
+    g.gain.setValueAtTime(0.001, t);
+    g.gain.exponentialRampToValueAtTime(0.4, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.start(t); o.stop(t + dur + 0.05);
+  }catch(e){ /* 音频不可用时不阻塞 */ }
+}
+function alertSound(){
+  beep(880, .18, 0); beep(660, .18, .22); beep(990, .32, .44);
+}
+function notifySupported(){
+  return 'Notification' in window;
+}
+function notifyGranted(){
+  return notifySupported() && Notification.permission === 'granted';
+}
+function fireNotify(title, body){
+  if (S.settings.notify && notifyGranted()){
+    try{ new Notification(title, {body}); }catch(e){}
+  }
+}
+function requestNotify(){
+  if (!notifySupported()){ toast('此浏览器不支持桌面通知', 'warn'); return; }
+  if (Notification.permission === 'granted'){ toast('已开启桌面通知 ✅'); return; }
+  Notification.requestPermission().then(p => {
+    toast(p === 'granted' ? '桌面通知已开启 ✅' : '通知被拒绝，提醒将只响铃 + 页面内提示', p === 'granted' ? 'ok' : 'warn');
+    renderSettings(); renderReminders();
+  });
+}
+
+/* ================= 数据 ================= */
+const LS_KEY = 'workbench_v1';
+const LS_SYNC_TOKEN = 'wb_sync_token';
+const LS_SYNC_GIST = 'wb_sync_gist';
+const LS_SYNC_LAST = 'wb_sync_last';
+const LS_UPDATED = 'wb_local_updated';
+const LS_BACKUP = 'workbench_v1_auto_backup';
+const GIST_FILE = 'workbench-sync.json';
+const GIST_API = new URLSearchParams(location.search).get('gistapi') || 'https://api.github.com';
+let localUpdatedAt = 0;
+const Sync = {token: '', gistId: '', pushing: false, timer: null, dirty: false};
+const CAT_EXP = ['餐饮','交通','学习','购物','娱乐','日用','医疗','其他'];
+const CAT_INC = ['生活费','兼职','奖学金','红包','其他'];
+const CAT_ICO = {'餐饮':'🍜','交通':'🚌','学习':'📚','购物':'🛍️','娱乐':'🎮','日用':'🧻','医疗':'💊','其他':'📦','生活费':'💵','兼职':'💼','奖学金':'🎓','红包':'🧧'};
+function defaults(){
+  return {
+    todos: [],
+    daily: {},        // 'YYYY-MM-DD' -> [{time,text}]
+    week: {},         // 'YYYY-Www' -> {goal, days:{'YYYY-MM-DD':[{time,text}]}}
+    ledger: [],       // {id,type,amount,cat,note,date}
+    savings: {goal:'', target:0, deadline:'', records:[]},
+    habits: [],       // {id,name,goal,history:{'YYYY-MM-DD':true}}
+    subjects: [],     // {id,name,target}
+    studyLog: [],     // {id,subj,minutes,date,note}
+    reminders: [],    // {id,text,type,date,time,intervalMin,enabled,firedOn,lastFired}
+    settings: {sound:true, notify:true, dark:false, pomodoro:{focus:25, short:5}},
+  };
+}
+let S = defaults();
+function save(){
+  persistLocal();
+  localUpdatedAt = Date.now();
+  try{ localStorage.setItem(LS_UPDATED, String(localUpdatedAt)); }catch(e){}
+  Sync.dirty = true;
+  syncSchedulePush();
+}
+function persistLocal(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){ toast('保存失败：' + e.message, 'error'); }
+}
+function load(){
+  localUpdatedAt = parseInt(localStorage.getItem(LS_UPDATED) || '0', 10) || Date.now();
+  Sync.token = localStorage.getItem(LS_SYNC_TOKEN) || '';
+  Sync.gistId = localStorage.getItem(LS_SYNC_GIST) || '';
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw){
+      const d = JSON.parse(raw);
+      S = Object.assign(defaults(), d);
+      S.settings = Object.assign(defaults().settings, d.settings || {});
+      S.savings = Object.assign({goal:'', target:0, deadline:'', records:[]}, d.savings || {});
+    }
+  }catch(e){
+    toast('数据读取失败，已使用空白数据', 'warn');
+    S = defaults();
+  }
+}
+
+/* ================= UI 状态 ================= */
+const UI = {
+  tab: 'dashboard',
+  planSub: 'daily',
+  weekKey: weekKey(new Date()),
+  dailyDate: todayISO(),
+  ledgerMonth: todayISO().slice(0, 7),
+  ledgerType: 'expense',
+  ledgerCat: '餐饮',
+  todoFilter: 'open',
+  remType: 'interval',
+  pomo: {running:false, phase:'focus', total:25*60, left:25*60, cycles:0, subj:'', timer:null},
+};
+
+/* ================= 渲染 ================= */
+function renderAll(){
+  renderDashboard(); renderTodos(); renderPlan(); renderLedger(); renderSavings();
+  renderHabits(); renderStudy(); renderReminders(); renderSettings();
+  if (UI.tab === 'dashboard') $('#page-title').textContent = '🏠 总览';
+}
+function goTab(t){
+  UI.tab = t;
+  $$('.side-item').forEach(el => el.classList.toggle('active', el.dataset.nav === t));
+  $$('.tab').forEach(el => el.classList.toggle('active', el.id === 'tab-' + t));
+  const titles = {dashboard:'🏠 总览', todos:'✅ 待办清单', plan:'📅 日 / 周计划', ledger:'💸 记账', savings:'🐷 存钱计划', habits:'🔥 习惯养成', study:'🍅 学习计划', reminders:'⏰ 提醒', settings:'⚙️ 设置 / 备份'};
+  $('#page-title').textContent = titles[t] || '';
+}
+/* ----- 总览 ----- */
+function renderDashboard(){
+  const today = todayISO();
+  const tds = S.todos.filter(t => t.date === today);
+  const tDone = tds.filter(t => t.done).length;
+  const overdue = S.todos.filter(t => !t.done && t.date < today).length;
+  const tExp = S.ledger.filter(l => l.type === 'expense' && l.date === today).reduce((a, b) => a + b.amount, 0);
+  const habitsToday = S.habits.filter(h => h.history[today]).length;
+  const curWk = weekKey(today);
+  const wkMinutes = S.studyLog.filter(l => weekKey(l.date) === curWk).reduce((a, b) => a + b.minutes, 0);
+  const wkTarget = S.subjects.reduce((a, b) => a + (b.target || 0), 0);
+  const sv = S.savings;
+  const svSaved = sv.records.reduce((a, b) => a + b.amount, 0);
+  const svPct = sv.target > 0 ? Math.min(100, svSaved / sv.target * 100) : 0;
+  let daysLeft = 0;
+  if (sv.deadline){ daysLeft = Math.max(0, Math.ceil((parseISO(sv.deadline) - new Date()) / 86400000)); }
+
+  // 接下来2小时会响的提醒
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const upcoming = S.reminders.filter(r => {
+    if (!r.enabled) return false;
+    if (r.type === 'once'){ if (r.date !== today || !r.time) return false; const [h, m] = r.time.split(':').map(Number); const t = h*60+m; return t >= nowMin && t <= nowMin + 120; }
+    if (r.type === 'daily'){ if (!r.time) return false; const [h, m] = r.time.split(':').map(Number); const t = h*60+m; return t >= nowMin && t <= nowMin + 120; }
+    return false;
+  }).sort((a, b) => a.time.localeCompare(b.time));
+
+  const plan = S.daily[today] || [];
+  const planHtml = plan.slice(0, 6).map(e => `<div class="tl-item"><span class="tl-time">${esc(e.time || '')}</span><span class="t">${esc(e.text)}</span></div>`).join('') ||
+    `<div class="empty"><span class="big">🗓️</span>今天还没有安排<br><button class="btn small primary" data-nav-jump="plan">去日计划添加</button></div>`;
+
+  $('#body-dashboard').innerHTML = `
+  <div class="cards">
+    <div class="card"><h3>✅ 今日待办</h3><div class="stat-num">${tDone}<small> / ${tds.length} 完成</small></div>${overdue ? `<div class="hint" style="color:var(--danger)">⚠ ${overdue} 项已逾期</div>` : '<div class="hint">加油，一件一件来</div>'}</div>
+    <div class="card"><h3>💸 今日支出</h3><div class="stat-num" style="color:var(--danger)">${money(tExp)}</div><div class="hint"><a href="#" data-nav-jump="ledger" style="color:var(--accent)">去记账 →</a></div></div>
+    <div class="card"><h3>🔥 习惯打卡</h3><div class="stat-num">${habitsToday}<small> / ${S.habits.length} 项</small></div>${S.habits.length === 0 ? '<div class="hint"><a href="#" data-nav-jump="habits" style="color:var(--accent)">先建个习惯 →</a></div>' : (habitsToday === S.habits.length && S.habits.length > 0 ? '<div class="hint" style="color:var(--ok)">全勤！👏</div>' : '<div class="hint">别忘了今天打卡</div>')}</div>
+    <div class="card"><h3>📖 本周学习</h3><div class="stat-num">${(wkMinutes/60).toFixed(1)}<small>h / ${wkTarget}h</small></div><div class="progress"><div class="fill ${wkTarget > 0 && wkMinutes/60 >= wkTarget ? 'ok' : ''}" style="width:${wkTarget > 0 ? Math.min(100, wkMinutes/60/wkTarget*100) : 0}%"></div></div></div>
+  </div>
+  <div class="cards">
+    <div class="card"><h3>🐷 存钱进度</h3>
+      ${sv.goal ? `<div class="stat-num">${svPct.toFixed(0)}<small>%</small></div>
+        <div class="progress"><div class="fill ${svPct >= 100 ? 'ok' : ''}" style="width:${svPct}%"></div></div>
+        <div class="hint">${money(svSaved)} / ${money(sv.target)} · ${sv.goal}${daysLeft > 0 ? ' · 剩 ' + daysLeft + ' 天' : ''}</div>
+        ${daysLeft > 0 && svSaved < sv.target ? `<div class="hint" style="color:var(--warn)">还需每天存 ${money((sv.target - svSaved) / daysLeft)}</div>` : ''}`
+      : `<div class="empty"><span class="big">🐷</span><a href="#" data-nav-jump="savings" style="color:var(--accent)">设个存钱目标 →</a></div>`}
+    </div>
+    <div class="card"><h3>⏰ 接下来 2 小时</h3>
+      ${upcoming.length ? upcoming.map(r => `<div class="tl-item"><span class="tl-time">${esc(r.time)}</span><span class="t">${esc(r.text)}</span></div>`).join('')
+        : `<div class="empty"><span class="big">🔕</span>没有待响的提醒<br><a href="#" data-nav-jump="reminders" style="color:var(--accent)">去设置提醒 →</a></div>`}
+    </div>
+    <div class="card"><h3>🗓️ 今日安排</h3>${planHtml}</div>
+  </div>
+  <div class="card">
+    <h3>⚡ 快捷操作</h3>
+    <div class="row" style="margin-bottom:0">
+      <button class="btn primary" data-nav-jump="todos">✅ 添加待办</button>
+      <button class="btn" data-nav-jump="ledger">💸 记一笔</button>
+      <button class="btn" data-nav-jump="habits">🔥 习惯打卡</button>
+      <button class="btn" data-nav-jump="study">🍅 开始番茄钟</button>
+      <button class="btn" data-nav-jump="reminders">⏰ 加提醒</button>
+    </div>
+  </div>`;
+}
+/* ----- 待办 ----- */
+function renderTodos(){
+  const today = todayISO();
+  const all = [...S.todos].sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    const at = a.time || '99:99', bt = b.time || '99:99';
+    if (at !== bt) return at < bt ? -1 : 1;
+    return b.createdAt - a.createdAt;
+  });
+  const list = all.filter(t => UI.todoFilter === 'all' ? true : UI.todoFilter === 'done' ? t.done : !t.done);
+  const openCount = S.todos.filter(t => !t.done).length;
+  const items = list.map(t => {
+    const overdue = !t.done && t.date < today;
+    const todayTag = t.date === today ? '<span class="badge ok">今天</span>' : '';
+    return `<div class="item ${t.done ? 'done' : ''}">
+      <div class="chk ${t.done ? 'on' : ''}" data-act="todo-toggle" data-id="${t.id}">${t.done ? '✓' : ''}</div>
+      <div class="grow">
+        <div class="t">${esc(t.text)}</div>
+        <div class="meta">
+          <span class="pri ${t.pri === '高' ? 'h' : t.pri === '中' ? 'm' : 'l'}"></span>
+          <span class="badge gray">${esc(t.cat)}</span>
+          ${t.pri ? `<span class="badge ${t.pri === '高' ? 'danger' : t.pri === '中' ? 'warn' : 'ok'}">${esc(t.pri)}</span>` : ''}
+          ${t.time ? `<span>🕐 ${esc(t.time)}</span>` : ''}
+          ${t.date !== today ? `<span class="${overdue ? 'badge danger' : 'badge gray'}">${esc(t.date)}${overdue ? ' 已逾期' : ''}</span>` : todayTag}
+        </div>
+      </div>
+      <button class="del" data-act="todo-del" data-id="${t.id}">✕</button>
+    </div>`;
+  }).join('');
+  $('#body-todos').innerHTML = `
+  <div class="card">
+    <div class="row">
+      <input type="text" id="todo-text" class="grow" placeholder="要做什么？如：背 50 个单词" data-enter="#btn-todo-add">
+      <select id="todo-cat">
+        <option value="学习">📚 学习</option><option value="生活">🏠 生活</option>
+        <option value="运动">🏃 运动</option><option value="工作">💼 工作</option><option value="其他">📦 其他</option>
+      </select>
+      <select id="todo-pri"><option value="高">🔴 高优先级</option><option value="中" selected>🟡 中</option><option value="低">🟢 低</option></select>
+      <input type="date" id="todo-date" value="${today}">
+      <input type="time" id="todo-time">
+      <button class="btn primary" id="btn-todo-add" data-act="todo-add">＋ 添加</button>
+    </div>
+    <div class="row" style="margin-bottom:10px">
+      <div class="seg">
+        <button class="${UI.todoFilter === 'open' ? 'sel' : ''}" data-act="todo-filter" data-f="open">未完成 ${openCount}</button>
+        <button class="${UI.todoFilter === 'all' ? 'sel' : ''}" data-act="todo-filter" data-f="all">全部</button>
+        <button class="${UI.todoFilter === 'done' ? 'sel' : ''}" data-act="todo-filter" data-f="done">已完成</button>
+      </div>
+    </div>
+    ${items || `<div class="empty"><span class="big">🎉</span>${UI.todoFilter === 'done' ? '还没有完成的任务' : '没有任务，先加一个吧'}</div>`}
+  </div>`;
+}
+/* ----- 日 / 周计划 ----- */
+function renderPlan(){
+  const today = todayISO();
+  const dailyHtml = renderDailyPlan(today);
+  const wk = UI.weekKey;
+  const weeklyHtml = renderWeeklyPlan(wk, today);
+  $('#body-plan').innerHTML = `
+  <div class="row" style="justify-content:space-between">
+    <div class="seg">
+      <button class="${UI.planSub === 'daily' ? 'sel' : ''}" data-act="plan-sub" data-s="daily">日计划</button>
+      <button class="${UI.planSub === 'weekly' ? 'sel' : ''}" data-act="plan-sub" data-s="weekly">周计划</button>
+    </div>
+  </div>
+  <div id="plan-daily" style="${UI.planSub === 'daily' ? '' : 'display:none'}">${dailyHtml}</div>
+  <div id="plan-weekly" style="${UI.planSub === 'weekly' ? '' : 'display:none'}">${weeklyHtml}</div>`;
+}
+function renderDailyPlan(date){
+  const list = S.daily[date] || [];
+  const sorted = [...list].sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
+  return `
+  <div class="card" style="margin-bottom:14px">
+    <div class="row">
+      <input type="date" id="daily-date" value="${date}" data-act="daily-date">
+      <span style="color:var(--text2);font-size:13.5px">${fmtDateCN(date)}</span>
+    </div>
+    <div class="row">
+      <input type="time" id="daily-time" value="">
+      <input type="text" id="daily-text" class="grow" placeholder="如：8:00 起床 · 背单词" data-enter="#btn-daily-add">
+      <button class="btn primary" id="btn-daily-add" data-act="daily-add">＋ 添加安排</button>
+    </div>
+    ${sorted.length ? sorted.map((e, i) => `
+      <div class="tl-item">
+        <span class="tl-time">${esc(e.time || '')}</span>
+        <span class="t grow">${esc(e.text)}</span>
+        <button class="del" data-act="daily-del" data-date="${date}" data-i="${i}">✕</button>
+      </div>`).join('')
+      : `<div class="empty"><span class="big">🗓️</span>这一天还没有安排</div>`}
+  </div>`;
+}
+function renderWeeklyPlan(wk, today){
+  const wkData = S.week[wk] || {goal: '', days: {}};
+  const days = weekDays(wk);
+  const colHtml = days.map(iso => {
+    const dt = new Date(iso.split('-').map(Number).map((v, i) => i === 1 ? v - 1 : v));
+    const isToday = iso === today;
+    const items = (wkData.days[iso] || []).map((e, i) => `
+      <div class="wk-item"><span class="wt">${esc(e.time || '')}</span><span class="grow">${esc(e.text)}</span><button class="del" data-act="week-del" data-date="${iso}" data-i="${i}">✕</button></div>`).join('');
+    return `<div class="day-col ${isToday ? 'today' : ''}">
+      <div class="dh">${isToday ? '今天' : '周' + '一二三四五六日'[dt.getDay() === 0 ? 6 : dt.getDay() - 1]}<small>${iso.slice(5)}</small></div>
+      <div class="day-items">${items || '<div style="color:var(--text2);font-size:12.5px;padding:4px 0">—</div>'}</div>
+      <div class="wk-add">
+        <input type="time" id="wk-time-${iso}">
+        <input type="text" id="wk-text-${iso}" placeholder="安排…" data-enter="#btn-wk-${iso}">
+        <button class="btn small primary" id="btn-wk-${iso}" data-act="week-add" data-date="${iso}">＋</button>
+      </div>
+    </div>`;
+  }).join('');
+  const wk0 = weekDays(wk);
+  const prevIso = parseISO(wk0[0]); prevIso.setDate(prevIso.getDate() - 7);
+  const nextIso = parseISO(wk0[0]); nextIso.setDate(nextIso.getDate() + 7);
+  return `
+  <div class="card" style="margin-bottom:14px">
+    <div class="row" style="justify-content:space-between">
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn small" data-week-nav="${weekKey(prevIso)}">‹ 上周</button>
+        <button class="btn small" data-week-nav="${weekKey(new Date())}">回到本周</button>
+        <button class="btn small" data-week-nav="${weekKey(nextIso)}">下周 ›</button>
+        <b style="margin-left:6px">${wk}</b>
+      </div>
+    </div>
+    <div class="row" style="margin-bottom:0">
+      <span style="color:var(--text2);font-size:13.5px">🎯 本周目标：</span>
+      <input type="text" class="grow" id="week-goal" value="${esc(wkData.goal)}" placeholder="这周最想完成的一件事…">
+    </div>
+  </div>
+  <div class="week-grid">${colHtml}</div>`;
+}
+/* ----- 记账 ----- */
+function renderLedger(){
+  const mk = UI.ledgerMonth;
+  const monthList = S.ledger.filter(l => monthKey(l.date) === mk);
+  const exp = monthList.filter(l => l.type === 'expense').reduce((a, b) => a + b.amount, 0);
+  const inc = monthList.filter(l => l.type === 'income').reduce((a, b) => a + b.amount, 0);
+  const today = todayISO();
+  const tExp = S.ledger.filter(l => l.type === 'expense' && l.date === today).reduce((a, b) => a + b.amount, 0);
+  const daysInMonth = new Date(+mk.slice(0,4), +mk.slice(5,7), 0).getDate();
+  const avg = exp / daysInMonth;
+  const cats = CAT_EXP.map(c => ({c, v: monthList.filter(l => l.type === 'expense' && l.cat === c).reduce((a, b) => a + b.amount, 0)}))
+    .filter(x => x.v > 0).sort((a, b) => b.v - a.v);
+  const maxV = Math.max(1, ...cats.map(x => x.v));
+  const recent = [...S.ledger].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)).slice(0, 15);
+  const catsList = UI.ledgerType === 'expense' ? CAT_EXP : CAT_INC;
+  $('#body-ledger').innerHTML = `
+  <div class="cards">
+    <div class="card"><h3>💸 今日支出</h3><div class="stat-num" style="color:var(--danger)">${money(tExp)}</div></div>
+    <div class="card"><h3>📉 本月支出</h3><div class="stat-num" style="color:var(--danger)">${money(exp)}</div><div class="hint">日均 ${money(avg)}</div></div>
+    <div class="card"><h3>📈 本月收入</h3><div class="stat-num" style="color:var(--ok)">${money(inc)}</div></div>
+    <div class="card"><h3>⚖️ 本月结余</h3><div class="stat-num" style="color:${inc - exp >= 0 ? 'var(--ok)' : 'var(--danger)'}">${money(inc - exp)}</div></div>
+  </div>
+  <div class="cards" style="grid-template-columns:1.4fr 1fr">
+    <div class="card">
+      <div class="row">
+        <div class="seg">
+          <button class="${UI.ledgerType === 'expense' ? 'sel' : ''}" data-act="ledger-type" data-t="expense">支出</button>
+          <button class="${UI.ledgerType === 'income' ? 'sel' : ''}" data-act="ledger-type" data-t="income">收入</button>
+        </div>
+        <input type="number" id="ledger-amt" placeholder="金额" step="0.01" min="0" data-enter="#btn-ledger-add">
+        <input type="text" id="ledger-note" placeholder="备注（可选）" data-enter="#btn-ledger-add">
+        <input type="date" id="ledger-date" value="${today}">
+        <button class="btn primary" id="btn-ledger-add" data-act="ledger-add">＋ 记一笔</button>
+      </div>
+      <div class="cat-btns" id="ledger-cats">
+        ${catsList.map(c => `<button class="cat-btn ${UI.ledgerCat === c ? 'sel' : ''}" data-act="ledger-cat" data-c="${c}">${CAT_ICO[c] || '📦'} ${c}</button>`).join('')}
+      </div>
+      <div style="margin-top:14px">
+        <h3 style="font-size:13.5px;color:var(--text2);margin-bottom:6px">最近记录</h3>
+        ${recent.length ? recent.map(l => `
+          <div class="item">
+            <div class="lg-ico">${CAT_ICO[l.cat] || '📦'}</div>
+            <div class="grow"><div class="t">${esc(l.cat)}${l.note ? ' · ' + esc(l.note) : ''}</div><div class="meta">${l.date}</div></div>
+            <div class="amt ${l.type}">${l.type === 'expense' ? '-' : '+'}${money(l.amount)}</div>
+            <button class="del" data-act="ledger-del" data-id="${l.id}">✕</button>
+          </div>`).join('')
+          : `<div class="empty"><span class="big">🧾</span>还没有记录，随手记第一笔吧</div>`}
+      </div>
+    </div>
+    <div class="card">
+      <h3>🗂️ 分类支出 <input type="month" data-act="ledger-month" value="${mk}" style="width:130px;padding:5px 8px;font-size:13px;margin-left:6px"></h3>
+      ${cats.length ? cats.map(x => `
+        <div class="catbar"><span class="lb">${CAT_ICO[x.c] || ''} ${esc(x.c)}</span><span class="bar"><i style="width:${x.v / maxV * 100}%"></i></span><span class="val">${money(x.v)}</span></div>`).join('')
+        : `<div class="empty"><span class="big">📊</span>本月还没有支出</div>`}
+      ${S.ledger.filter(l => l.type === 'expense' && monthKey(l.date) === mk).length > 0 ? '' : ''}
+    </div>
+  </div>`;
+}
+/* ----- 存钱 ----- */
+function renderSavings(){
+  const sv = S.savings;
+  const saved = sv.records.reduce((a, b) => a + b.amount, 0);
+  const pct = sv.target > 0 ? Math.min(100, saved / sv.target * 100) : 0;
+  let daysLeft = 0;
+  if (sv.deadline){ daysLeft = Math.max(0, Math.ceil((parseISO(sv.deadline) - new Date()) / 86400000)); }
+  const needDaily = daysLeft > 0 && saved < sv.target ? (sv.target - saved) / daysLeft : 0;
+  const recs = [...sv.records].sort((a, b) => b.date.localeCompare(a.date));
+  $('#body-savings').innerHTML = sv.goal ? `
+  <div class="cards" style="grid-template-columns:1.4fr 1fr">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h3>🐷 ${esc(sv.goal)}</h3>
+        <div><button class="btn small" data-act="sav-edit">✏️ 修改</button> <button class="btn small danger" data-act="sav-reset">🗑️ 删除</button></div>
+      </div>
+      <div class="stat-num">${pct.toFixed(1)}<small>%</small></div>
+      <div class="progress"><div class="fill ${pct >= 100 ? 'ok' : ''}" style="width:${pct}%"></div></div>
+      <div class="hint">已存 ${money(saved)} / ${money(sv.target)}</div>
+      <div class="hint">${sv.deadline ? '截止 ' + sv.deadline + '（剩 ' + daysLeft + ' 天）' : '未设截止日期'}</div>
+      ${needDaily > 0 ? `<div class="hint" style="color:var(--warn)">💰 要达成目标，平均每天需存 ${money(Math.ceil(needDaily))}</div>` : (pct >= 100 ? '<div class="hint" style="color:var(--ok)">🎉 目标达成！恭喜！</div>' : '')}
+      <div class="row" style="margin-top:16px">
+        <input type="number" id="sav-amt" placeholder="存多少？" step="0.01" min="0" data-enter="#btn-sav-add">
+        <input type="date" id="sav-date" value="${todayISO()}">
+        <button class="btn primary" id="btn-sav-add" data-act="sav-add">💰 存一笔</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>📜 存款记录</h3>
+      ${recs.length ? recs.map(r => `
+        <div class="item">
+          <div class="grow"><div class="t">${money(r.amount)}</div><div class="meta">${r.date}${r.note ? ' · ' + esc(r.note) : ''}</div></div>
+          <button class="del" data-act="sav-del" data-id="${r.id}">✕</button>
+        </div>`).join('')
+        : `<div class="empty"><span class="big">💰</span>还没存过钱，今天开始第一笔？</div>`}
+    </div>
+  </div>` : `
+  <div class="card" style="max-width:520px">
+    <div class="empty"><span class="big">🐷</span>还没有存钱目标</div>
+    <div class="row">
+      <input type="text" id="sav-goal" class="grow" placeholder="目标名称，如：买 MacBook / 旅行基金" data-enter="#btn-sav-set">
+      <input type="number" id="sav-target" placeholder="目标金额 ¥" step="0.01" min="0" data-enter="#btn-sav-set">
+    </div>
+    <div class="row">
+      <input type="date" id="sav-deadline">
+      <button class="btn primary" id="btn-sav-set" data-act="sav-set">🎯 设定目标</button>
+    </div>
+  </div>`;
+}
+/* ----- 习惯 ----- */
+function renderHabits(){
+  const today = todayISO();
+  const cards = S.habits.map(h => {
+    const history = h.history || {};
+    // 最近 28 天
+    const days = [];
+    for (let i = 27; i >= 0; i--){
+      const d = new Date(); d.setDate(d.getDate() - i);
+      days.push(toISO(d));
+    }
+    const cells = days.map(iso => {
+      const on = !!history[iso];
+      const isToday = iso === today;
+      return `<div class="hg-cell ${on ? 'on' : ''} ${isToday ? 'today' : ''}" title="${iso}${on ? ' ✓' : ''}" data-act="${isToday ? 'habit-cell' : ''}" data-id="${h.id}" data-date="${iso}">${isToday && !on ? '＋' : ''}</div>`;
+    }).join('');
+    // 连续天数（今天没打则从昨天算）
+    let streak = 0;
+    const d0 = new Date(); if (!history[today]) d0.setDate(d0.getDate() - 1);
+    let cur = new Date(d0);
+    while (history[toISO(cur)]){ streak++; cur.setDate(cur.getDate() - 1); }
+    // 本周
+    const wkDays = weekDays(weekKey(today));
+    const wkCount = wkDays.filter(iso => history[iso]).length;
+    return `<div class="card" style="margin-bottom:14px">
+      <div class="row" style="justify-content:space-between;margin-bottom:4px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <b style="font-size:16px">${esc(h.name)}</b>
+          <span class="badge ${wkCount >= (h.goal || 1) ? 'ok' : ''}">本周 ${wkCount}/${h.goal || 1}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="badge warn" title="连续打卡天数">🔥 ${streak} 天</span>
+          <button class="del" data-act="habit-del" data-id="${h.id}">✕</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div class="habit-grid">${cells}</div>
+        <div style="font-size:12.5px;color:var(--text2);line-height:1.8">
+          每周目标：<select data-act="habit-goal" data-id="${h.id}" style="padding:3px 6px;font-size:12.5px">
+            ${[1,2,3,4,5,6,7].map(n => `<option value="${n}" ${(h.goal || 1) === n ? 'selected' : ''}>${n} 次</option>`).join('')}
+          </select><br>点「＋」完成今天的打卡
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  $('#body-habits').innerHTML = `
+  <div class="card" style="margin-bottom:14px">
+    <div class="row">
+      <input type="text" id="habit-name" class="grow" placeholder="习惯名称，如：背单词 / 跑步 / 23:30 前睡" data-enter="#btn-habit-add">
+      <select id="habit-goal-new"><option value="1">每周 1 次</option><option value="2">每周 2 次</option><option value="3" selected>每周 3 次</option><option value="5">每周 5 次</option><option value="7">每天</option></select>
+      <button class="btn primary" id="btn-habit-add" data-act="habit-add">＋ 新建习惯</button>
+    </div>
+    <div style="font-size:12.5px;color:var(--text2)">💡 习惯不在多，先坚持 1~2 个最想养成的。断了一天不要紧，明天继续就好。</div>
+  </div>
+  ${cards || `<div class="empty" style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius)"><span class="big">🔥</span>还没有习惯，建一个试试？</div>`}`;
+}
+/* ----- 学习 ----- */
+function renderStudy(){
+  const today = todayISO();
+  const curWk = weekKey(today);
+  const todayMin = S.studyLog.filter(l => l.date === today).reduce((a, b) => a + b.minutes, 0);
+  const wkMin = S.studyLog.filter(l => weekKey(l.date) === curWk).reduce((a, b) => a + b.minutes, 0);
+  const subjHtml = S.subjects.map(s => {
+    const mins = S.studyLog.filter(l => l.subj === s.name && weekKey(l.date) === curWk).reduce((a, b) => a + b.minutes, 0);
+    const targetMin = (s.target || 0) * 60;
+    const pct = targetMin > 0 ? Math.min(100, mins / targetMin * 100) : 0;
+    return `<div class="item">
+      <div class="grow"><div class="t">${esc(s.name)}</div>
+        <div class="progress" style="margin:6px 0 2px"><div class="fill ${pct >= 100 ? 'ok' : ''}" style="width:${pct}%"></div></div>
+        <div class="meta">本周 ${(mins/60).toFixed(1)}h / 目标 ${s.target || 0}h</div>
+      </div>
+      <input type="number" data-act="subj-target" data-id="${s.id}" value="${s.target || 0}" min="0" step="0.5" style="width:80px;padding:5px 8px" title="每周目标小时数">
+      <button class="del" data-act="subj-del" data-id="${s.id}">✕</button>
+    </div>`;
+  }).join('');
+  const recent = [...S.studyLog].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)).slice(0, 10);
+  const p = UI.pomo;
+  const phaseLabel = p.phase === 'focus' ? '专注' : '休息';
+  $('#body-study').innerHTML = `
+  <div class="cards">
+    <div class="card"><h3>⏱️ 今日学习</h3><div class="stat-num">${Math.floor(todayMin/60)}h ${todayMin%60}m</div></div>
+    <div class="card"><h3>📅 本周学习</h3><div class="stat-num">${(wkMin/60).toFixed(1)}<small>h</small></div>
+      <div class="hint">目标 ${S.subjects.reduce((a,b)=>a+(b.target||0),0)}h</div></div>
+  </div>
+  <div class="cards" style="grid-template-columns:1fr 1.3fr">
+    <div class="card pomo">
+      <div class="phase">🍅 番茄钟 · <b>${phaseLabel}</b> · 第 ${p.cycles + 1} 轮</div>
+      <div class="big-time ${p.phase === 'break' ? 'break' : ''}">${String(Math.floor(p.left/60)).padStart(2,'0')}:${String(p.left%60).padStart(2,'0')}</div>
+      <div class="pomo-actions">
+        <button class="btn primary" data-act="pomo-start">${p.running ? '⏸ 暂停' : '▶ 开始'}</button>
+        <button class="btn" data-act="pomo-reset">↺ 重置</button>
+        <button class="btn" data-act="pomo-skip">⏭ 跳过</button>
+      </div>
+      <div class="row" style="margin:6px 0 0;justify-content:center">
+        <select data-act="pomo-subj" style="padding:6px 10px;font-size:13px">
+          <option value="">📖 专注（不记科目）</option>
+          ${S.subjects.map(s => `<option value="${esc(s.name)}" ${p.subj === s.name ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div style="font-size:12px;color:var(--text2)">专注 ${S.settings.pomodoro.focus} 分钟 + 休息 ${S.settings.pomodoro.short} 分钟 · 完成一轮自动计入对应科目</div>
+    </div>
+    <div class="card">
+      <h3>📚 科目与本周目标（小时）</h3>
+      <div class="row" style="margin:10px 0">
+        <input type="text" id="subj-name" class="grow" placeholder="科目，如：生态学 / 英语 / 统计" data-enter="#btn-subj-add">
+        <input type="number" id="subj-target-new" placeholder="每周 h" min="0" step="0.5" style="width:90px" data-enter="#btn-subj-add">
+        <button class="btn primary" id="btn-subj-add" data-act="subj-add">＋</button>
+      </div>
+      ${subjHtml || `<div class="empty"><span class="big">📚</span>先添加科目和每周目标</div>`}
+      <div style="margin-top:8px">
+        <div class="row" style="margin:6px 0 4px">
+          <select id="study-subj" style="padding:7px 10px">
+            ${S.subjects.map(s => `<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('') || '<option value="">（请先添加科目）</option>'}
+          </select>
+          <input type="number" id="study-min" placeholder="分钟" min="1" step="5" style="width:90px" data-enter="#btn-study-add">
+          <button class="btn" id="btn-study-add" data-act="study-add">＋ 手动记录</button>
+        </div>
+        <h3 style="font-size:13.5px;color:var(--text2);margin:6px 0">最近学习记录</h3>
+        ${recent.length ? recent.map(l => `
+          <div class="item">
+            <div class="lg-ico">📖</div>
+            <div class="grow"><div class="t">${esc(l.subj)} · ${l.minutes} 分钟</div><div class="meta">${l.date}${l.note ? ' · ' + esc(l.note) : ''}</div></div>
+            <button class="del" data-act="study-del" data-id="${l.id}">✕</button>
+          </div>`).join('')
+          : `<div class="empty" style="padding:14px"><span class="big">🌱</span>还没有记录</div>`}
+      </div>
+    </div>
+  </div>`;
+}
+/* ----- 提醒 ----- */
+function remFieldsHtml(t){
+  if (t === 'once') return `<input type="date" id="rem-date" value="${todayISO()}"><input type="time" id="rem-time">`;
+  if (t === 'daily') return `<input type="time" id="rem-time">`;
+  return `<select id="rem-interval"><option value="15">每 15 分钟</option><option value="30" selected>每 30 分钟</option><option value="45">每 45 分钟</option><option value="60">每 1 小时</option><option value="90">每 1.5 小时</option></select>`;
+}
+function renderReminders(){
+  const desc = r => r.type === 'once' ? `⏱ 一次 · ${r.date} ${r.time || ''}`
+    : r.type === 'daily' ? `🔁 每天 · ${r.time || ''}`
+    : `🔄 每 ${r.intervalMin || 30} 分钟`;
+  const list = [...S.reminders].sort((a, b) => {
+    const av = a.type === 'once' ? (a.date + ' ' + (a.time || '')) : (a.time || '');
+    const bv = b.type === 'once' ? (b.date + ' ' + (b.time || '')) : (b.time || '');
+    return av.localeCompare(bv);
+  });
+  const typeBtns = [['interval','🔄 间隔'],['daily','🔁 每天'],['once','⏱ 一次']];
+  $('#body-reminders').innerHTML = `
+  <div class="rem-msg">💡 <b>提醒要生效需要：</b>① 用 Chrome / Edge 打开本页（桌面通知需点一次「允许」）② <b>页面保持开着</b>。到点会弹通知 + 响铃，页面没开就收不到。手机浏览器同样适用。</div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="row">
+      <div class="seg">
+        ${typeBtns.map(([t, l]) => `<button class="${UI.remType === t ? 'sel' : ''}" data-act="rem-type" data-t="${t}">${l}</button>`).join('')}
+      </div>
+    </div>
+    <div class="row">
+      <input type="text" id="rem-text" class="grow" placeholder="提醒内容，如：放下手机，起来走走" data-enter="#btn-rem-add">
+      <span id="rem-fields">${remFieldsHtml(UI.remType)}</span>
+      <button class="btn primary" id="btn-rem-add" data-act="rem-add">＋ 添加提醒</button>
+    </div>
+    <div style="font-size:12.5px;color:var(--text2)">⚡ 一键添加（治手机依赖）：</div>
+    <div class="row" style="margin-top:6px">
+      <button class="btn small" data-act="rem-preset" data-min="30" data-text="📵 放下手机，起来活动一下">📵 每30分钟 · 放下手机</button>
+      <button class="btn small" data-act="rem-preset" data-min="45" data-text="👀 眼睛休息，远眺 5 分钟">👀 每45分钟 · 护眼</button>
+      <button class="btn small" data-act="rem-preset" data-min="60" data-text="💧 喝水">💧 每小时 · 喝水</button>
+      <button class="btn small" data-act="rem-preset" data-min="90" data-text="🧘 站起来拉伸一下">🧘 每90分钟 · 拉伸</button>
+    </div>
+  </div>
+  <div class="card">
+    <h3>📋 提醒列表（${S.reminders.length}）</h3>
+    ${list.length ? list.map(r => `
+      <div class="item">
+        <div class="chk ${r.enabled ? 'on' : ''}" data-act="rem-toggle" data-id="${r.id}" title="点击开关">${r.enabled ? '✓' : ''}</div>
+        <div class="grow"><div class="t" style="${r.enabled ? '' : 'color:var(--text2)'}">${esc(r.text)}</div><div class="meta"><span class="badge gray">${desc(r)}</span>${!r.enabled ? '<span class="badge danger">已关闭</span>' : ''}</div></div>
+        <button class="btn small ${notifyGranted() ? '' : 'primary'}" data-act="rem-test">🔔 测试</button>
+        <button class="del" data-act="rem-del" data-id="${r.id}">✕</button>
+      </div>`).join('')
+      : `<div class="empty"><span class="big">⏰</span>还没有提醒。先从上面的一键预设开始？</div>`}
+    <div class="row" style="margin-top:12px">
+      <button class="btn ${notifyGranted() ? 'ok' : 'primary'}" data-act="enable-notify">${notifyGranted() ? '✅ 桌面通知已开启' : '🔔 开启桌面通知'}</button>
+      <button class="btn" data-act="rem-test">🎵 测试响铃</button>
+    </div>
+  </div>`;
+}
+/* ----- 设置 ----- */
+function renderSettings(){
+  $('#body-settings').innerHTML = `
+  <div class="card" style="max-width:640px">
+    <div class="set-row"><div class="lb">🔔 桌面通知<small>到点弹系统通知（需先允许）</small></div>
+      <label class="switch"><input type="checkbox" data-act="set-notify" ${S.settings.notify ? 'checked' : ''}><span class="slider"></span></label></div>
+    <div class="set-row"><div class="lb">🎵 提醒响铃<small>提醒和番茄钟结束时响铃</small></div>
+      <label class="switch"><input type="checkbox" data-act="set-sound" ${S.settings.sound ? 'checked' : ''}><span class="slider"></span></label></div>
+    <div class="set-row"><div class="lb">🌙 深色模式<small>晚上用不刺眼</small></div>
+      <label class="switch"><input type="checkbox" data-act="set-dark" ${S.settings.dark ? 'checked' : ''}><span class="slider"></span></label></div>
+    <div class="set-row"><div class="lb">🍅 番茄钟时长<small>专注 / 休息（分钟）</small></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="number" data-act="set-pomo-focus" value="${S.settings.pomodoro.focus}" min="1" max="120" style="width:70px;padding:5px 8px">
+        <span style="color:var(--text2)">/</span>
+        <input type="number" data-act="set-pomo-break" value="${S.settings.pomodoro.short}" min="1" max="60" style="width:70px;padding:5px 8px">
+      </div></div>
+  </div>
+  <div class="card" style="max-width:640px;margin-top:14px">
+    <h3 style="margin-bottom:10px">💾 数据备份</h3>
+    <div class="row">
+      <button class="btn primary" data-act="export">⬇️ 导出备份</button>
+      <button class="btn" data-act="import">⬆️ 导入备份</button>
+      <button class="btn danger" data-act="clear-data">🗑️ 清空所有数据</button>
+    </div>
+    <div style="font-size:12.5px;color:var(--text2)">数据只存在这台设备的浏览器里。换电脑 / 换浏览器时先导出，再导入。建议每周导出一次。</div>
+  </div>
+  <div class="card" style="max-width:640px;margin-top:14px">
+    <h3 style="margin-bottom:8px">🛰️ 云同步（手机 / 平板 / 电脑共用一份数据）</h3>
+    ${syncEnabled() ? `
+      <div style="font-size:13.5px;line-height:1.9">
+        <span class="badge ok">已启用</span>
+        <div style="color:var(--text2);font-size:12.5px;margin-top:6px">
+          上次同步：${lastSyncText()} · 每台设备只需填入同一个 Token 即可。<br>
+          以「最后修改的设备」为准；本地数据在覆盖前会自动备份。
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn primary" data-act="sync-now">🔄 立即同步</button>
+        <button class="btn danger" data-act="sync-disable">🚫 关闭云同步</button>
+        ${localStorage.getItem(LS_BACKUP) ? '<button class="btn" data-act="sync-restore">♻️ 恢复自动备份</button>' : ''}
+      </div>`
+    : `
+      <div style="font-size:13px;color:var(--text2);line-height:1.9;background:var(--bg);border-radius:10px;padding:10px 12px;margin-bottom:10px">
+        <b style="color:var(--text)">如何获取 Token（一次性，约 2 分钟）：</b><br>
+        ① 打开 <code style="font-size:12px">github.com/settings/tokens</code>（需 GitHub 账号，免费注册）<br>
+        ② 点 <b>Generate new token (classic)</b> → 勾选 <b>gist</b> 权限 → 拉到最下 Generate → 复制生成的 token<br>
+        ③ 粘到下面点「连接」即可。手机 / 平板打开同一网址粘同一个 token，数据自动共用。
+      </div>
+      <div class="row" style="margin-top:8px">
+        <input type="password" id="sync-token-input" class="grow" placeholder="粘贴 GitHub Token（ghp_ 开头）" style="letter-spacing:1px">
+        <button class="btn primary" data-act="sync-enable">🔗 连接并同步</button>
+      </div>
+      <div style="font-size:12px;color:var(--text2)">🔒 Token 只保存在<b>你这台设备的浏览器本地</b>，不会出现在网页代码里，也不会发给任何人。请勿把 Token 发给别人。</div>`}
+  </div>
+  <div class="card" style="max-width:640px;margin-top:14px">
+    <h3 style="margin-bottom:6px">❓ 常见问题</h3>
+    <div style="font-size:13.5px;color:var(--text2);line-height:1.9">
+      <b style="color:var(--text)">收不到提醒？</b> 页面必须开着，且通知权限已允许。<br>
+      <b style="color:var(--text)">想换台设备用？</b> 导出 JSON → 在新设备导入即可。<br>
+      <b style="color:var(--text)">数据会丢吗？</b> 只要不清除浏览器数据就不会丢，但请定期导出备份。
+    </div>
+  </div>`;
+}
+
+/* ================= 番茄钟 ================= */
+function renderPomo(){
+  const el = $('#body-study .big-time');
+  if (!el) return;
+  const p = UI.pomo;
+  el.textContent = String(Math.floor(p.left/60)).padStart(2,'0') + ':' + String(p.left%60).padStart(2,'0');
+}
+function pomoStart(){
+  const p = UI.pomo;
+  if (p.running){ clearInterval(p.timer); p.timer = null; p.running = false; }
+  else{
+    if (p.left <= 0) p.left = p.total;
+    p.running = true;
+    p.timer = setInterval(() => {
+      p.left--;
+      if (p.left <= 0){ finishPomo(); }
+      else renderPomo();
+    }, 1000);
+  }
+  renderStudy();
+}
+function pomoReset(){
+  const p = UI.pomo;
+  p.running = false;
+  if (p.timer){ clearInterval(p.timer); p.timer = null; }
+  p.left = p.total;
+  renderStudy();
+}
+function pomoSkip(){
+  const p = UI.pomo;
+  p.running = false;
+  if (p.timer){ clearInterval(p.timer); p.timer = null; }
+  p.left = 0;
+  finishPomo();
+}
+function finishPomo(){
+  const p = UI.pomo;
+  p.running = false;
+  if (p.timer){ clearInterval(p.timer); p.timer = null; }
+  const wasFocus = p.phase === 'focus';
+  alertSound();
+  if (wasFocus){
+    fireNotify('🍅 专注完成', '干得漂亮！休息一下');
+    toast('🍅 专注完成，休息一下吧');
+    const mins = S.settings.pomodoro.focus;
+    addStudyMinutes(p.subj || '专注', mins);
+    p.cycles++;
+    p.phase = 'short';
+    p.total = S.settings.pomodoro.short * 60;
+  } else {
+    fireNotify('☕ 休息结束', '该回来继续专注了');
+    toast('☕ 休息结束，开始下一轮专注');
+    p.phase = 'focus';
+    p.total = S.settings.pomodoro.focus * 60;
+  }
+  p.left = p.total;
+  renderStudy();
+}
+
+/* ================= 提醒引擎 ================= */
+function checkReminders(){
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const today = todayISO();
+  let changed = false;
+  S.reminders.forEach(r => {
+    if (!r.enabled) return;
+    if (r.type === 'once'){
+      if (r.date !== today || !r.time) return;
+      const [h, m] = r.time.split(':').map(Number);
+      const t = h * 60 + m;
+      if (nowMin >= t && nowMin - t < 2 && r.firedOn !== today + ' ' + r.time){
+        r.firedOn = today + ' ' + r.time; changed = true; fireReminder(r);
+      }
+    } else if (r.type === 'daily'){
+      if (!r.time) return;
+      const [h, m] = r.time.split(':').map(Number);
+      const t = h * 60 + m;
+      if (nowMin >= t && nowMin - t < 2 && r.firedOn !== today){
+        r.firedOn = today; changed = true; fireReminder(r);
+      }
+    } else if (r.type === 'interval'){
+      if (!r.lastFired){ r.lastFired = now.getTime(); changed = true; return; }
+      if (now.getTime() - r.lastFired >= (r.intervalMin || 30) * 60000){
+        r.lastFired = now.getTime(); changed = true; fireReminder(r);
+      }
+    }
+  });
+  if (changed) save();
+}
+function fireReminder(r){
+  fireNotify('⏰ ' + r.text, new Date().toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'}));
+  alertSound();
+  toast('⏰ ' + r.text, 'warn');
+}
+
+/* ================= 数据操作 ================= */
+function addTodo(){
+  const text = $('#todo-text').value.trim();
+  if (!text){ toast('请输入任务内容', 'warn'); return; }
+  S.todos.push({
+    id: uid(), text,
+    cat: $('#todo-cat').value, pri: $('#todo-pri').value,
+    date: $('#todo-date').value || todayISO(),
+    time: $('#todo-time').value || '',
+    done: false, createdAt: Date.now(),
+  });
+  $('#todo-text').value = '';
+  save(); renderTodos(); renderDashboard();
+  toast('已添加 ✅');
+}
+function addDaily(){
+  const date = $('#daily-date').value || todayISO();
+  const text = $('#daily-text').value.trim();
+  if (!text){ toast('请输入安排内容', 'warn'); return; }
+  S.daily[date] = S.daily[date] || [];
+  S.daily[date].push({time: $('#daily-time').value || '', text});
+  $('#daily-text').value = ''; $('#daily-time').value = '';
+  save(); renderPlan(); renderDashboard();
+  toast('已加入日计划 ✅');
+}
+function addWeek(iso){
+  const text = $('#wk-text-' + iso).value.trim();
+  if (!text){ toast('请输入安排内容', 'warn'); return; }
+  const wk = weekKey(iso);
+  S.week[wk] = S.week[wk] || {goal: '', days: {}};
+  S.week[wk].days[iso] = S.week[wk].days[iso] || [];
+  S.week[wk].days[iso].push({time: $('#wk-time-' + iso).value || '', text});
+  $('#wk-text-' + iso).value = ''; $('#wk-time-' + iso).value = '';
+  save(); renderPlan();
+  toast('已加入周计划 ✅');
+}
+function addLedger(){
+  const amt = parseFloat($('#ledger-amt').value);
+  if (!amt || amt <= 0){ toast('请输入有效金额', 'warn'); return; }
+  S.ledger.push({
+    id: uid(), type: UI.ledgerType, amount: amt, cat: UI.ledgerCat,
+    note: $('#ledger-note').value.trim(), date: $('#ledger-date').value || todayISO(),
+  });
+  $('#ledger-amt').value = ''; $('#ledger-note').value = '';
+  save(); renderLedger(); renderDashboard();
+  toast('已记账 ' + (UI.ledgerType === 'expense' ? '-' : '+') + money(amt));
+}
+function addHabit(){
+  const name = $('#habit-name').value.trim();
+  if (!name){ toast('请输入习惯名称', 'warn'); return; }
+  if (S.habits.some(h => h.name === name)){ toast('这个习惯已经存在了', 'warn'); return; }
+  S.habits.push({id: uid(), name, goal: +$('#habit-goal-new').value, history: {}});
+  $('#habit-name').value = '';
+  save(); renderHabits(); renderDashboard();
+  toast('习惯「' + name + '」已创建，今天就开始打卡 💪');
+}
+function addSubject(){
+  const name = $('#subj-name').value.trim();
+  if (!name){ toast('请输入科目名称', 'warn'); return; }
+  if (S.subjects.some(s => s.name === name)){ toast('这个科目已存在', 'warn'); return; }
+  S.subjects.push({id: uid(), name, target: parseFloat($('#subj-target-new').value) || 0});
+  $('#subj-name').value = ''; $('#subj-target-new').value = '';
+  save(); renderStudy();
+  toast('已添加科目 ✅');
+}
+function addStudyMinutes(subj, minutes, note){
+  S.studyLog.push({id: uid(), subj, minutes, date: todayISO(), note: note || ''});
+  save();
+}
+function addReminder(){
+  const text = $('#rem-text').value.trim();
+  if (!text){ toast('请输入提醒内容', 'warn'); return; }
+  const r = {id: uid(), text, type: UI.remType, date: '', time: '', intervalMin: 30, enabled: true, firedOn: '', lastFired: 0};
+  if (UI.remType === 'once'){
+    r.date = $('#rem-date').value || todayISO();
+    r.time = $('#rem-time').value || '';
+    if (!r.time){ toast('请选择时间', 'warn'); return; }
+  } else if (UI.remType === 'daily'){
+    r.time = $('#rem-time').value || '';
+    if (!r.time){ toast('请选择时间', 'warn'); return; }
+  } else {
+    r.intervalMin = +$('#rem-interval').value || 30;
+    r.lastFired = 0;
+  }
+  S.reminders.push(r);
+  $('#rem-text').value = '';
+  save(); renderReminders();
+  toast('提醒已添加 ⏰');
+  if (!notifyGranted()) requestNotify();
+}
+
+/* ================= 云同步（GitHub Gist） ================= */
+function syncEnabled(){ return !!(Sync.token && Sync.gistId); }
+function syncAuthHeaders(){ return {'Authorization': 'Bearer ' + Sync.token, 'Accept': 'application/vnd.github+json'}; }
+function lastSyncText(){
+  const t = parseInt(localStorage.getItem(LS_SYNC_LAST) || '0', 10);
+  return t ? new Date(t).toLocaleTimeString('zh-CN', {hour12: false}) : '从未';
+}
+function syncSchedulePush(){
+  if (!syncEnabled() || Sync.pushing) return;
+  clearTimeout(Sync.timer);
+  Sync.timer = setTimeout(() => { if (Sync.dirty) syncPush(); }, 4000);
+}
+async function syncPush(){
+  if (!syncEnabled() || Sync.pushing) return;
+  Sync.pushing = true;
+  try{
+    const content = JSON.stringify({updatedAt: localUpdatedAt, data: S});
+    const res = await fetch(GIST_API + '/gists/' + Sync.gistId, {
+      method: 'PATCH',
+      headers: Object.assign({'Content-Type': 'application/json'}, syncAuthHeaders()),
+      body: JSON.stringify({files: {[GIST_FILE]: {content}}}),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    Sync.dirty = false;
+    try{ localStorage.setItem(LS_SYNC_LAST, String(localUpdatedAt)); }catch(e){}
+  }catch(e){
+    console.warn('云同步推送失败：', e);
+    toast('云同步推送失败（' + e.message + '），稍后自动重试', 'warn');
+  }finally{
+    Sync.pushing = false;
+  }
+}
+function isPristine(s){
+  return !s.todos.length && !s.ledger.length && !s.habits.length && !s.subjects.length && !s.studyLog.length && !s.reminders.length && !s.savings.goal && !s.savings.records.length && !Object.keys(s.daily).length && !Object.keys(s.week).length;
+}
+function normalizeData(d){
+  const n = Object.assign(defaults(), d);
+  n.settings = Object.assign(defaults().settings, (d && d.settings) || {});
+  n.savings = Object.assign({goal:'', target:0, deadline:'', records:[]}, (d && d.savings) || {});
+  return n;
+}
+async function syncPull(silent){
+  if (!syncEnabled()) return;
+  try{
+    const res = await fetch(GIST_API + '/gists/' + Sync.gistId, {headers: syncAuthHeaders()});
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const g = await res.json();
+    const f = g.files && g.files[GIST_FILE];
+    if (!f || !f.content) throw new Error('未找到同步文件');
+    const blob = JSON.parse(f.content);
+    if (!blob || !blob.data || !blob.updatedAt) throw new Error('云端数据格式不对');
+    if (isPristine(S) || blob.updatedAt > localUpdatedAt){
+      if (!isPristine(S) && blob.updatedAt > localUpdatedAt){
+        try{ localStorage.setItem(LS_BACKUP, JSON.stringify(S)); }catch(e){}
+        toast('⚠️ 云端有更新数据，本地已自动备份', 'warn');
+      }
+      S = normalizeData(blob.data);
+      localUpdatedAt = blob.updatedAt;
+      persistLocal();
+      try{ localStorage.setItem(LS_UPDATED, String(localUpdatedAt)); }catch(e){}
+      renderAll();
+      if (S.settings.dark) setDark(true); else setDark(false);
+      if (!silent) toast('已从云端同步 ✅');
+    } else if (localUpdatedAt > blob.updatedAt){
+      syncPush();
+    }
+  }catch(e){
+    console.warn('云同步拉取失败：', e);
+    if (!silent) toast('云同步拉取失败：' + e.message, 'error');
+  }
+}
+async function syncEnable(){
+  const token = $('#sync-token-input').value.trim();
+  if (!token){ toast('请先粘贴 GitHub Token', 'warn'); return; }
+  Sync.token = token;
+  try{ localStorage.setItem(LS_SYNC_TOKEN, token); }catch(e){}
+  toast('正在连接 GitHub…');
+  try{
+    const listRes = await fetch(GIST_API + '/gists?per_page=100', {headers: syncAuthHeaders()});
+    if (!listRes.ok) throw new Error('Token 无效或权限不足（HTTP ' + listRes.status + '）');
+    const gists = await listRes.json();
+    const found = gists.find(g => g.files && g.files[GIST_FILE]);
+    if (found){
+      Sync.gistId = found.id;
+      try{ localStorage.setItem(LS_SYNC_GIST, Sync.gistId); }catch(e){}
+      toast('找到已有云端数据，正在同步…');
+      await syncPull(false);
+    } else {
+      const content = JSON.stringify({updatedAt: localUpdatedAt, data: S});
+      const createRes = await fetch(GIST_API + '/gists', {
+        method: 'POST',
+        headers: Object.assign({'Content-Type': 'application/json'}, syncAuthHeaders()),
+        body: JSON.stringify({description: '效率工作台云同步数据（勿删）', public: false, files: {[GIST_FILE]: {content}}}),
+      });
+      if (!createRes.ok) throw new Error('创建 Gist 失败（HTTP ' + createRes.status + '）');
+      const g = await createRes.json();
+      Sync.gistId = g.id;
+      try{ localStorage.setItem(LS_SYNC_GIST, Sync.gistId); }catch(e){}
+      toast('云同步已启用 ✅ 数据已上传');
+    }
+  }catch(e){
+    toast('连接失败：' + e.message, 'error');
+    Sync.token = ''; Sync.gistId = '';
+    try{ localStorage.removeItem(LS_SYNC_TOKEN); localStorage.removeItem(LS_SYNC_GIST); }catch(err){}
+  }
+  renderSettings();
+}
+
+/* ================= 事件 ================= */
+document.addEventListener('click', e => {
+  const nav = e.target.closest('[data-nav]');
+  if (nav){ goTab(nav.dataset.nav); return; }
+  const jump = e.target.closest('[data-nav-jump]');
+  if (jump){ e.preventDefault(); goTab(jump.dataset.navJump); return; }
+  const wkNav = e.target.closest('[data-week-nav]');
+  if (wkNav){ UI.weekKey = wkNav.dataset.weekNav; renderPlan(); return; }
+
+  const actEl = e.target.closest('[data-act]');
+  if (!actEl) return;
+  const act = actEl.dataset.act;
+  const id = actEl.dataset.id;
+
+  switch (act){
+    case 'todo-toggle': { const t = S.todos.find(x => x.id === id); if (t){ t.done = !t.done; save(); renderTodos(); renderDashboard(); } break; }
+    case 'todo-del': { S.todos = S.todos.filter(x => x.id !== id); save(); renderTodos(); renderDashboard(); break; }
+    case 'todo-filter': UI.todoFilter = actEl.dataset.f; renderTodos(); break;
+
+    case 'plan-sub': UI.planSub = actEl.dataset.s; renderPlan(); break;
+    case 'week-nav': UI.weekKey = actEl.dataset.week; renderPlan(); break;
+    case 'todo-add': addTodo(); break;
+    case 'daily-add': addDaily(); break;
+    case 'ledger-add': addLedger(); break;
+    case 'habit-add': addHabit(); break;
+    case 'sav-set': setSavingsGoal(false); break;
+    case 'daily-del': { const arr = S.daily[actEl.dataset.date] || []; arr.splice(+actEl.dataset.i, 1); save(); renderPlan(); renderDashboard(); break; }
+    case 'week-del': { const wk = weekKey(actEl.dataset.date); const days = S.week[wk] && S.week[wk].days; if (days && days[actEl.dataset.date]){ days[actEl.dataset.date].splice(+actEl.dataset.i, 1); save(); renderPlan(); } break; }
+    case 'week-add': addWeek(actEl.dataset.date); break;
+
+    case 'ledger-type': UI.ledgerType = actEl.dataset.t; UI.ledgerCat = UI.ledgerType === 'expense' ? '餐饮' : '生活费'; renderLedger(); break;
+    case 'ledger-cat': UI.ledgerCat = actEl.dataset.c; document.querySelectorAll('#ledger-cats .cat-btn').forEach(b => b.classList.toggle('sel', b === actEl)); break;
+    case 'ledger-del': { S.ledger = S.ledger.filter(x => x.id !== id); save(); renderLedger(); renderDashboard(); break; }
+
+    case 'sav-add': addSavings(); break;
+    case 'sav-del': { S.savings.records = S.savings.records.filter(x => x.id !== id); save(); renderSavings(); renderDashboard(); break; }
+    case 'sav-edit': setSavingsGoal(true); break;
+    case 'sav-reset': { if (confirm('确定删除存钱目标及其所有记录？')){ S.savings = {goal:'', target:0, deadline:'', records:[]}; save(); renderSavings(); renderDashboard(); } break; }
+
+    case 'habit-cell': { const h = S.habits.find(x => x.id === id); if (h){ h.history = h.history || {}; h.history[actEl.dataset.date] = !h.history[actEl.dataset.date]; save(); renderHabits(); renderDashboard(); toast(h.history[actEl.dataset.date] ? '打卡成功 🔥' : '已取消打卡', 'ok'); } break; }
+    case 'habit-del': { if (confirm('删除习惯「' + (S.habits.find(x => x.id === id) || {}).name + '」？历史打卡记录也会删除')){ S.habits = S.habits.filter(x => x.id !== id); save(); renderHabits(); renderDashboard(); } break; }
+
+    case 'subj-add': addSubject(); break;
+    case 'subj-del': { const s = S.subjects.find(x => x.id === id); if (s){ S.subjects = S.subjects.filter(x => x.id !== id); S.studyLog = S.studyLog.filter(l => l.subj !== s.name); } save(); renderStudy(); renderDashboard(); break; }
+    case 'study-add': { const subj = $('#study-subj').value; const min = parseInt($('#study-min').value); if (!subj){ toast('请先添加科目', 'warn'); return; } if (!min || min <= 0){ toast('请输入分钟数', 'warn'); return; } addStudyMinutes(subj, min); $('#study-min').value = ''; save(); renderStudy(); renderDashboard(); toast('已记录 ' + min + ' 分钟 ✅'); break; }
+    case 'study-del': { S.studyLog = S.studyLog.filter(x => x.id !== id); save(); renderStudy(); renderDashboard(); break; }
+
+    case 'pomo-start': pomoStart(); break;
+    case 'pomo-reset': pomoReset(); break;
+    case 'pomo-skip': pomoSkip(); break;
+
+    case 'rem-type': {
+      UI.remType = actEl.dataset.t;
+      document.querySelectorAll('[data-act="rem-type"]').forEach(b => b.classList.toggle('sel', b === actEl));
+      const fc = $('#rem-fields');
+      if (fc) fc.outerHTML = '<span id="rem-fields">' + remFieldsHtml(UI.remType) + '</span>';
+      break;
+    }
+    case 'rem-add': addReminder(); break;
+    case 'rem-toggle': { const r = S.reminders.find(x => x.id === id); if (r){ r.enabled = !r.enabled; if (r.enabled) r.lastFired = 0; save(); renderReminders(); } break; }
+    case 'rem-del': { S.reminders = S.reminders.filter(x => x.id !== id); save(); renderReminders(); break; }
+    case 'rem-preset': {
+      const text = actEl.dataset.text; const min = +actEl.dataset.min;
+      S.reminders.push({id: uid(), text, type: 'interval', date: '', time: '', intervalMin: min, enabled: true, firedOn: '', lastFired: Date.now()});
+      save(); renderReminders(); toast('已添加：' + text + '（每 ' + min + ' 分钟）'); break;
+    }
+    case 'rem-test': { alertSound(); fireNotify('🔔 提醒测试', '如果你能看到这条通知，提醒功能就绪！'); toast('🔔 已响铃' + (notifyGranted() ? ' + 桌面通知' : '（未开启桌面通知）'), 'ok'); break; }
+    case 'enable-notify': requestNotify(); break;
+
+    case 'sync-enable': syncEnable(); break;
+    case 'sync-now': { toast('正在同步…'); syncPull(false); if (Sync.dirty) syncPush(); break; }
+    case 'sync-disable': {
+      if (confirm('关闭云同步？本机数据保留，但不再自动推送 / 拉取。')){
+        Sync.token = ''; Sync.gistId = '';
+        try{ localStorage.removeItem(LS_SYNC_TOKEN); localStorage.removeItem(LS_SYNC_GIST); }catch(e){}
+        renderSettings();
+        toast('已关闭云同步', 'warn');
+      }
+      break;
+    }
+    case 'sync-restore': {
+      const raw = localStorage.getItem(LS_BACKUP);
+      if (raw){
+        try{
+          S = normalizeData(JSON.parse(raw));
+          localUpdatedAt = Date.now();
+          persistLocal();
+          try{ localStorage.setItem(LS_UPDATED, String(localUpdatedAt)); }catch(e){}
+          renderAll();
+          if (S.settings.dark) setDark(true); else setDark(false);
+          toast('已恢复自动备份 ✅');
+        }catch(e){ toast('备份数据损坏，无法恢复', 'error'); }
+      } else { toast('没有可恢复的备份', 'warn'); }
+      break;
+    }
+
+    case 'export': {
+      const data = {app: 'workbench', version: 1, exportedAt: new Date().toISOString(), data: S};
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = '效率工作台备份-' + todayISO() + '.json';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+      toast('备份已导出 ⬇️');
+      break;
+    }
+    case 'import': $('#import-file').click(); break;
+    case 'clear-data': {
+      if (confirm('确定清空所有数据？此操作不可恢复！建议先导出备份。')){
+        localStorage.removeItem(LS_KEY);
+        S = defaults();
+        save(); renderAll();
+        toast('已清空所有数据', 'warn');
+      }
+      break;
+    }
+  }
+});
+
+document.addEventListener('change', e => {
+  const el = e.target;
+  const act = el.dataset.act;
+  if (!act) return;
+  switch (act){
+    case 'daily-date': renderDaily(); break;
+    case 'ledger-month': UI.ledgerMonth = el.value; renderLedger(); break;
+    case 'habit-goal': { const h = S.habits.find(x => x.id === el.dataset.id); if (h){ h.goal = +el.value; save(); renderHabits(); } break; }
+    case 'subj-target': { const s = S.subjects.find(x => x.id === el.dataset.id); if (s){ s.target = parseFloat(el.value) || 0; save(); renderStudy(); renderDashboard(); } break; }
+    case 'pomo-subj': UI.pomo.subj = el.value; break;
+    case 'set-notify': S.settings.notify = el.checked; save(); break;
+    case 'set-sound': S.settings.sound = el.checked; if (el.checked) alertSound(); save(); break;
+    case 'set-dark': setDark(el.checked); save(); break;
+    case 'set-pomo-focus': { S.settings.pomodoro.focus = Math.min(120, Math.max(1, +el.value || 25)); if (!UI.pomo.running && UI.pomo.phase === 'focus'){ UI.pomo.total = S.settings.pomodoro.focus * 60; UI.pomo.left = UI.pomo.total; renderStudy(); } save(); break; }
+    case 'set-pomo-break': { S.settings.pomodoro.short = Math.min(60, Math.max(1, +el.value || 5)); save(); break; }
+  }
+});
+
+// 周计划本周目标（失焦保存）
+document.addEventListener('input', e => {
+  if (e.target.id === 'week-goal'){
+    const wk = UI.weekKey;
+    S.week[wk] = S.week[wk] || {goal: '', days: {}};
+    S.week[wk].goal = e.target.value;
+    save();
+  }
+});
+
+// Enter 快捷添加
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target && e.target.dataset && e.target.dataset.enter){
+    e.preventDefault();
+    const btn = $(e.target.dataset.enter);
+    if (btn) btn.click();
+  }
+});
+
+// 存钱目标表单（两种模式）
+function setSavingsGoal(editMode){
+  const sv = S.savings;
+  if (!editMode){
+    const goal = $('#sav-goal').value.trim();
+    const target = parseFloat($('#sav-target').value);
+    if (!goal || !target || target <= 0){ toast('请填写目标名称和金额', 'warn'); return; }
+    sv.goal = goal; sv.target = target; sv.deadline = $('#sav-deadline').value || '';
+    save(); renderSavings(); renderDashboard();
+    toast('存钱目标已设定 🎯 加油！');
+  } else {
+    const goal = prompt('目标名称：', sv.goal);
+    if (goal === null) return;
+    const target = parseFloat(prompt('目标金额（¥）：', sv.target));
+    if (!target || target <= 0){ toast('金额无效', 'warn'); return; }
+    const deadline = prompt('截止日期（YYYY-MM-DD，可留空）：', sv.deadline);
+    if (deadline === null) return;
+    sv.goal = goal.trim(); sv.target = target; sv.deadline = deadline.trim();
+    save(); renderSavings(); renderDashboard();
+    toast('已修改 ✅');
+  }
+}
+function addSavings(){
+  const amt = parseFloat($('#sav-amt').value);
+  if (!amt || amt <= 0){ toast('请输入存款金额', 'warn'); return; }
+  S.savings.records.push({id: uid(), amount: amt, date: $('#sav-date').value || todayISO(), note: ''});
+  $('#sav-amt').value = '';
+  save(); renderSavings(); renderDashboard();
+  toast('已存入 ' + money(amt) + ' 💰');
+}
+
+/* ================= 杂项 ================= */
+function renderDaily(){
+  // 重绘日计划区（用于切换日期）
+  const date = $('#daily-date').value || todayISO();
+  UI.dailyDate = date;
+  const wrap = $('#plan-daily');
+  if (wrap) wrap.innerHTML = renderDailyPlan(date);
+}
+function setDark(on){
+  document.documentElement.setAttribute('data-theme', on ? 'dark' : '');
+  S.settings.dark = on;
+  $('#btn-dark').textContent = on ? '☀️' : '🌙';
+}
+function tickClock(){
+  const n = new Date();
+  $('#clock').textContent = n.toLocaleTimeString('zh-CN', {hour12: false});
+}
+function init(){
+  load();
+  if (S.settings.dark) setDark(true); else setDark(false);
+  $('#date-line').textContent = fmtDateCN(todayISO()) + ' · 今天是新的一天，加油 💪';
+  renderAll();
+  tickClock();
+  setInterval(tickClock, 1000);
+  setInterval(checkReminders, 20000);
+  if (syncEnabled()) setTimeout(() => syncPull(true), 2500);
+  setInterval(() => { if (syncEnabled()) syncPull(true); }, 120000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && syncEnabled()){ syncPull(true); if (Sync.dirty) syncPush(); }
+  });
+  $('#btn-dark').addEventListener('click', () => setDark(!S.settings.dark));
+  $('#import-file').addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const d = JSON.parse(reader.result);
+        if (!d || !d.data){ throw new Error('文件格式不对'); }
+        S = Object.assign(defaults(), d.data);
+        S.settings = Object.assign(defaults().settings, (d.data && d.data.settings) || {});
+        S.savings = Object.assign({goal:'', target:0, deadline:'', records:[]}, (d.data && d.data.savings) || {});
+        save(); renderAll();
+        if (S.settings.dark) setDark(true); else setDark(false);
+        toast('导入成功 ✅');
+      }catch(err){
+        toast('导入失败：' + err.message, 'error');
+      }
+    };
+    reader.readAsText(f);
+    e.target.value = '';
+  });
+  // 页面可见时立即检查一次提醒（可能错过了）
+  setTimeout(checkReminders, 3000);
+}
+init();
+</script>
+</body>
+</html>
