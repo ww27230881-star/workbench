@@ -355,7 +355,7 @@ function defaults(){
     subjects: [],     // {id,name,target}
     studyLog: [],     // {id,subj,minutes,date,note}
     reminders: [],    // {id,text,type,date,time,intervalMin,enabled,firedOn,lastFired}
-    settings: {sound:true, notify:true, dark:false, pomodoro:{focus:25, short:5}, bg:{type:'none', value:'', overlay:0.5}},
+    settings: {sound:true, notify:true, dark:false, pomodoro:{focus:25, short:5}, bg:{type:'none', value:'', overlay:0.5, text:'auto'}},
   };
 }
 let S = defaults();
@@ -935,6 +935,17 @@ function renderSettings(){
       <button class="btn primary" id="btn-bg-url" data-act="bg-url">应用</button>
       <button class="btn danger" data-act="bg-reset">✕ 移除背景</button>
     </div>
+    <div class="row" style="margin-top:12px">
+      <span style="font-size:13px;color:var(--text2);white-space:nowrap">✒️ 文字颜色</span>
+      <button class="cat-btn ${(bg.text || 'auto') === 'auto' ? 'sel' : ''}" data-act="bg-text" data-v="auto">自动</button>
+      <button class="cat-btn ${bg.text === 'dark' ? 'sel' : ''}" data-act="bg-text" data-v="dark">深色</button>
+      <button class="cat-btn ${bg.text === 'light' ? 'sel' : ''}" data-act="bg-text" data-v="light">浅色</button>
+      <label class="cat-btn" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;padding:5px 12px">
+        <input type="color" id="bg-text-color" data-act="bg-text-color" value="${/^#[0-9a-f]{6}$/i.test(bg.text || '') ? bg.text : '#1d2433'}" style="width:26px;height:22px;padding:0;border:none;background:none;cursor:pointer" title="自定义颜色">
+        自定义
+      </label>
+      <span id="bg-text-hex" style="font-size:12px;color:var(--text2)">${/^#[0-9a-f]{6}$/i.test(bg.text || '') ? bg.text : ''}</span>
+    </div>
     <div class="row" style="margin-top:4px">
       <span style="font-size:13px;color:var(--text2);white-space:nowrap">🌫️ 蒙层（文字清晰度）</span>
       <input type="range" min="0" max="80" value="${Math.round((bg.overlay != null ? bg.overlay : 0.5) * 100)}" data-act="bg-overlay" style="flex:1;max-width:240px">
@@ -1396,8 +1407,15 @@ document.addEventListener('click', e => {
       toast('背景已应用 🎨');
       break;
     }
+    case 'bg-text': {
+      const v = actEl.dataset.v;
+      if (!S.settings.bg) S.settings.bg = {type:'none', value:'', overlay:0.5, text:'auto'};
+      S.settings.bg.text = v;
+      save(); applyBg(); renderSettings();
+      break;
+    }
     case 'bg-reset': {
-      S.settings.bg = {type:'none', value:'', overlay:0.5};
+      S.settings.bg = {type:'none', value:'', overlay:0.5, text:'auto'};
       save(); applyBg(); renderSettings();
       break;
     }
@@ -1436,6 +1454,15 @@ document.addEventListener('change', e => {
     case 'habit-goal': { const h = S.habits.find(x => x.id === el.dataset.id); if (h){ h.goal = +el.value; save(); renderHabits(); } break; }
     case 'subj-target': { const s = S.subjects.find(x => x.id === el.dataset.id); if (s){ s.target = parseFloat(el.value) || 0; save(); renderStudy(); renderDashboard(); } break; }
     case 'pomo-subj': UI.pomo.subj = el.value; break;
+    case 'bg-text-color': {
+      if (!S.settings.bg) S.settings.bg = {type:'none', value:'', overlay:0.5, text:'auto'};
+      S.settings.bg.text = el.value;
+      save(); applyBg();
+      const hex = $('#bg-text-hex');
+      if (hex) hex.textContent = el.value;
+      document.querySelectorAll('[data-act="bg-text"]').forEach(b => b.classList.toggle('sel', false));
+      break;
+    }
     case 'bg-overlay': {
       const v = +el.value / 100;
       if (!S.settings.bg) S.settings.bg = {type:'none', value:'', overlay:0.5};
@@ -1518,12 +1545,28 @@ function setDark(on){
   applyBg();
 }
 /* ===== 背景图 ===== */
+function hexToRgba(hex, a){
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex).trim());
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+}
 function applyBg(){
   const b = S.settings.bg || {};
   const type = b.type || 'none';
   const doc = document.documentElement;
   doc.style.setProperty('--bgov-color', S.settings.dark ? 'rgba(12,15,23,1)' : 'rgba(244,246,250,1)');
   doc.style.setProperty('--bgov', String(Math.min(0.85, Math.max(0, +(b.overlay != null ? b.overlay : 0.5)))));
+  // 文字颜色：auto 跟随主题；dark/light/hex 自定义
+  const t = b.text || 'auto';
+  if (t === 'auto'){
+    doc.style.removeProperty('--text');
+    doc.style.removeProperty('--text2');
+  } else {
+    const c = t === 'dark' ? '#1d2433' : t === 'light' ? '#f2f4f9' : t;
+    doc.style.setProperty('--text', c);
+    doc.style.setProperty('--text2', hexToRgba(c, 0.62));
+  }
   const body = document.body;
   if (type === 'none' || !b.value){
     body.classList.remove('custom-bg');
