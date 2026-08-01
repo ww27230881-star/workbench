@@ -270,22 +270,17 @@ const monthKey = iso => iso.slice(0, 7);
 const money = n => '¥' + (Math.round(n * 100) / 100).toLocaleString('zh-CN');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const WD = ['周日','周一','周二','周三','周四','周五','周六'];
-function weekKey(iso){
+function weekKey(iso){ // 周从周六开始：返回本周六的日期作为周标识，如 '2026-08-01'
   if (iso instanceof Date) iso = toISO(iso);
-  const [y, m, d] = iso.split('-').map(Number);
-  const dt = new Date(y, m - 1, d);
-  dt.setDate(dt.getDate() - (dt.getDay() + 6) % 7 + 3); // 移到本周四
-  const year = dt.getFullYear();
-  const jan1 = new Date(year, 0, 1);
-  const wk = Math.ceil((((dt - jan1) / 86400000) + jan1.getDay() + 1) / 7);
-  return year + '-W' + pad(wk);
+  const d = parseISO(iso);
+  const dow = (d.getDay() + 6) % 7; // 0=周一 ... 5=周六, 6=周日
+  d.setDate(d.getDate() - ((dow + 2) % 7)); // 回退到本周六
+  return toISO(d);
 }
 function parseISO(iso){ const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d); }
-function weekDays(wk){ // '2026-W31' -> 7 个 ISO 日期，周一到周日
-  const m = wk.match(/^(\d{4})-W(\d{2})$/); if (!m) return [];
-  const jan4 = new Date(+m[1], 0, 4);
-  jan4.setDate(jan4.getDate() - (jan4.getDay() + 6) % 7 + (+m[2] - 1) * 7);
-  return Array.from({length: 7}, (_, i) => { const d = new Date(jan4); d.setDate(d.getDate() + i); return toISO(d); });
+function weekDays(wk){ // 周标识 = 周六日期 -> 7 个日期：周六..周五
+  const start = parseISO(wk);
+  return Array.from({length: 7}, (_, i) => { const d = new Date(start); d.setDate(d.getDate() + i); return toISO(d); });
 }
 function fmtDateCN(iso){
   if (!iso) return '';
@@ -476,8 +471,9 @@ function renderDashboard(){
     ? upcoming.slice(0, 3).map(r => `<span class="badge warn" style="margin-right:6px">🕐 ${esc(r.time)} ${esc(r.text)}</span>`).join('')
     : '<span style="color:var(--text2)">接下来 2 小时没有待响提醒</span>';
 
-  // 一周时间条
-  const dayOfWeek = (new Date().getDay() + 6) % 7 + 1;
+  // 一周时间条（周从周六开始）
+  const dow0 = (new Date().getDay() + 6) % 7;
+  const dayOfWeek = ((dow0 + 2) % 7) + 1; // 周六=第 1 天
   const wkCells = wkDays.map(iso => {
     const d = parseISO(iso);
     const isToday = iso === today;
@@ -509,7 +505,7 @@ function renderDashboard(){
   $('#body-dashboard').innerHTML = `
   <div class="card" style="margin-bottom:14px">
     <div class="row" style="justify-content:space-between;margin-bottom:8px">
-      <h3 style="margin-bottom:0">📅 这一周（${curWk}）</h3>
+      <h3 style="margin-bottom:0">📅 这一周（${curWk.slice(5)} 起）</h3>
       <span class="badge gray">本周第 ${dayOfWeek}/7 天</span>
     </div>
     ${wkData.goal ? `<div class="hint" style="margin-bottom:10px">🎯 本周目标：${esc(wkData.goal)}</div>` : ''}
@@ -671,7 +667,7 @@ function renderWeeklyPlan(wk, today){
         <button class="btn small" data-week-nav="${weekKey(prevIso)}">‹ 上周</button>
         <button class="btn small" data-week-nav="${weekKey(new Date())}">回到本周</button>
         <button class="btn small" data-week-nav="${weekKey(nextIso)}">下周 ›</button>
-        <b style="margin-left:6px">${wk}</b>
+        <b style="margin-left:6px">${wk.slice(5)} 起</b>
       </div>
     </div>
     <div class="row" style="margin-bottom:0">
@@ -797,7 +793,7 @@ function renderHabits(){
       <select id="habit-goal-new"><option value="1">每周 1 次</option><option value="2">每周 2 次</option><option value="3" selected>每周 3 次</option><option value="5">每周 5 次</option><option value="7">每天</option></select>
       <button class="btn primary" id="btn-habit-add" data-act="habit-add">＋ 新建习惯</button>
     </div>
-    <div style="font-size:12.5px;color:var(--text2)">💡 每周目标选「每天」归到每日区，选 1~6 次归到每周区（每周一自动重新计算）。习惯不在多，先坚持 1~2 个。断一天不要紧，明天继续。</div>
+    <div style="font-size:12.5px;color:var(--text2)">💡 每周目标选「每天」归到每日区，选 1~6 次归到每周区（每周六自动重新计算）。习惯不在多，先坚持 1~2 个。断一天不要紧，明天继续。</div>
   </div>
   ${sec('🔁', '每天打卡', daily)}${sec('📆', '每周打卡', weekly)}
   ${!S.habits.length ? `<div class="empty" style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius)"><span class="big">🔥</span>还没有习惯，建一个试试？</div>` : ''}`;
