@@ -158,7 +158,9 @@ input[type="month"]{width:160px}
 .hg-cell.today:hover{opacity:.85}
 .sec-label{display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:700;color:var(--text2);margin:18px 0 10px}
 .sec-label .cnt{font-size:12px;background:var(--bg);border-radius:99px;padding:1px 9px;color:var(--text2);font-weight:600}
-.wkline{display:flex;align-items:center;gap:10px;margin:2px 0 10px}
+.item{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--border)}
+.item:last-child{border-bottom:none}
+.cat-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
 .wkline .progress{flex:1;margin:0}
 .wkline-txt{font-size:12.5px;color:var(--text2);white-space:nowrap;min-width:96px;text-align:right}
 /* ===== 番茄钟 ===== */
@@ -642,6 +644,7 @@ function renderDashboard(){
   }).slice(0, 12).map(t => `
     <div class="item ${t.done ? 'done' : ''}" style="padding:7px 2px">
       <div class="chk ${t.done ? 'on' : ''}" data-act="todo-toggle" data-id="${t.id}">${t.done ? '✓' : ''}</div>
+      <i class="cat-dot" style="background:${catColor(t.cat)}"></i>
       <div class="grow"><div class="t" style="font-size:14px">${esc(t.text)}</div></div>
       ${t.time ? `<span class="badge gray">🕐 ${esc(t.time)}</span>` : ''}
       <button class="btn small" data-act="todo-start-timer" data-id="${t.id}" title="用这条待办开始计时" style="padding:2px 6px">▶️</button>
@@ -674,7 +677,6 @@ function renderDashboard(){
           <button class="btn primary small" id="btn-dash-todo" data-act="dash-todo-add" style="flex-shrink:0">＋</button>
         </div>
         ${todoItems ? `<div class="dash-todo-list">${todoItems}</div>` : `<div class="empty" style="padding:10px"><span class="big">🎉</span>今天没有待办，加一个吧</div>`}
-        <div class="hint" style="margin-top:6px;flex-shrink:0"><button class="btn small" data-act="todo-tomorrow">⏭ 没做完的移到明天</button></div>
       </div>
       <div class="card">
         <h3>🗓️ 周计划 <a href="#" data-nav-jump="plan" style="font-size:12.5px;color:var(--accent);font-weight:400">编辑 →</a></h3>
@@ -758,6 +760,7 @@ function renderTodos(){
     const todayTag = t.date === today ? '<span class="badge ok">今天</span>' : '';
     return `<div class="item ${t.done ? 'done' : ''}">
       <div class="chk ${t.done ? 'on' : ''}" data-act="todo-toggle" data-id="${t.id}">${t.done ? '✓' : ''}</div>
+      <i class="cat-dot" style="background:${catColor(t.cat)}"></i>
       <div class="grow">
         <div class="t">${esc(t.text)}</div>
         <div class="meta">
@@ -790,7 +793,6 @@ function renderTodos(){
         <button class="${UI.todoFilter === 'all' ? 'sel' : ''}" data-act="todo-filter" data-f="all">全部</button>
         <button class="${UI.todoFilter === 'done' ? 'sel' : ''}" data-act="todo-filter" data-f="done">已完成</button>
       </div>
-      <button class="btn small" data-act="todo-tomorrow" title="把今天及之前没做完的待办，日期改成明天" style="margin-left:auto">⏭ 未完成移到明天</button>
     </div>
     ${items || `<div class="empty"><span class="big">🎉</span>${UI.todoFilter === 'done' ? '还没有完成的任务' : '没有任务，先加一个吧'}</div>`}
   </div>`;
@@ -1700,15 +1702,6 @@ document.addEventListener('click', e => {
     case 'log-del': {
       S.log = (S.log || []).filter(x => x.id !== id);
       save(); renderDashboard(); renderPlan();
-      break;
-    }
-    case 'todo-tomorrow': {
-      const tm = new Date(); tm.setDate(tm.getDate() + 1);
-      const tmIso = toISO(tm);
-      let n = 0;
-      S.todos.forEach(t => { if (!t.done && t.date <= todayISO()){ t.date = tmIso; n++; } });
-      if (n){ save(); renderTodos(); renderDashboard(); toast('已把 ' + n + ' 条未完成移到明天 ⏭'); }
-      else { toast('今天没有需要顺延的待办'); }
       break;
     }
 
