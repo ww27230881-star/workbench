@@ -309,8 +309,11 @@ body.custom-text .vtl-ad-label,body.custom-text .legend{color:#677084}
 .modal-box span[style*="color:var(--text2)"]{color:#8e8e93 !important}
 .modal-box .seg button{background:var(--bg);color:#677084;border:none}
 .modal-box .seg button.sel{background:#fff;color:#1d2433}
-#rec-timer-pill{position:fixed;right:18px;bottom:18px;z-index:90;background:var(--card);border:1px solid var(--border);border-radius:24px;padding:9px 16px;font-size:13.5px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.18);cursor:pointer;color:var(--accent);max-width:60vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#rec-timer-pill:hover{background:var(--accent);color:#fff}
+#rec-timer-pill{position:fixed;right:18px;bottom:18px;z-index:90;background:var(--card);border:1px solid var(--border);border-radius:24px;padding:8px 12px 8px 16px;font-size:13.5px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.18);cursor:default;color:var(--accent);max-width:70vw;white-space:nowrap;overflow:hidden;align-items:center;gap:2px}
+#rec-timer-pill span{overflow:hidden;text-overflow:ellipsis}
+.pill-btn{background:none;border:none;padding:3px 7px;font-size:13px;cursor:pointer;border-radius:10px;color:inherit;font-weight:700;transition:background .15s}
+.pill-btn:hover{background:rgba(127,127,127,.16)}
+.pill-end{color:var(--danger)}
 .modal-box h3{margin-bottom:12px}
 .modal-box .row{margin-bottom:12px}
 .modal-box .row:last-child{margin-bottom:0}
@@ -612,7 +615,7 @@ const UI = {
   weekKey: weekKey(new Date()),
   tlDate: todayISO(),
   recDate: todayISO(),
-  recTimer: {running:false, start:0, date:'', text:'', iv:null},
+  recTimer: {running:false, start:0, acc:0, paused:false, date:'', text:'', cat:'', iv:null},
   ledgerMonth: todayISO().slice(0, 7),
   ledgerType: 'expense',
   ledgerCat: '餐饮',
@@ -832,12 +835,15 @@ function renderRecTimer(){
   const pill = $('#rec-timer-pill');
   if (!pill) return;
   if (t.running){
-    const sec = Math.floor((Date.now() - t.start) / 1000);
+    const totalMs = t.acc + (t.paused ? 0 : (Date.now() - t.start));
+    const sec = Math.floor(totalMs / 1000);
     const mm = String(Math.floor(sec / 60)).padStart(2, '0');
     const ss = String(sec % 60).padStart(2, '0');
     pill.style.display = 'flex';
-    pill.innerHTML = '⏱️ ' + mm + ':' + ss + ' ' + esc(t.text) + ' · ■ 结束';
     pill.title = t.text;
+    pill.innerHTML = `<span>⏱️ ${mm}:${ss} ${esc(t.text)}${t.paused ? '（已暂停）' : ''}</span>
+      <button class="pill-btn" data-act="rec-timer-pause" title="${t.paused ? '继续' : '暂停'}">${t.paused ? '▶️' : '⏸'}</button>
+      <button class="pill-btn pill-end" data-act="rec-timer" title="结束并保存">■ 结束</button>`;
   } else {
     pill.style.display = 'none';
   }
@@ -1721,15 +1727,30 @@ document.addEventListener('click', e => {
     case 'rec-timer': {
       const t = UI.recTimer;
       if (t.running){
-        // 结束并保存
-        const dur = Math.max(1, Math.round((Date.now() - t.start) / 60000));
+        // 结束并保存（含暂停累计）
+        const dur = Math.max(1, Math.round((t.acc + (t.paused ? 0 : (Date.now() - t.start))) / 60000));
         const st = new Date(t.start);
         S.log.push({id: uid(), date: t.date || todayISO(), time: pad(st.getHours()) + ':' + pad(st.getMinutes()), text: t.text, cat: t.cat || '临时事务', dur, createdAt: Date.now()});
         clearInterval(t.iv);
-        UI.recTimer = {running:false, start:0, date:'', text:'', cat:'', iv:null};
+        UI.recTimer = {running:false, start:0, acc:0, paused:false, date:'', text:'', cat:'', iv:null};
         save(); renderDashboard(); renderPlan(); renderRecTimer();
         toast('已保存：' + t.text + '（' + dur + ' 分钟）⏱️');
       }
+      break;
+    }
+    case 'rec-timer-pause': {
+      const t = UI.recTimer;
+      if (!t.running) break;
+      if (t.paused){
+        t.paused = false;
+        t.start = Date.now();
+        toast('继续计时 ⏱️');
+      } else {
+        t.acc += Date.now() - t.start;
+        t.paused = true;
+        toast('已暂停 ⏸');
+      }
+      renderRecTimer();
       break;
     }
     case 'todo-start-timer': {
@@ -1738,7 +1759,7 @@ document.addEventListener('click', e => {
       const todo = S.todos.find(x => x.id === id);
       if (!todo) break;
       const catMatch = TIME_CATS.find(c => c.name === todo.cat);
-      t.running = true; t.start = Date.now(); t.date = todayISO(); t.text = todo.text; t.cat = catMatch ? todo.cat : '临时事务';
+      t.running = true; t.start = Date.now(); t.acc = 0; t.paused = false; t.date = todayISO(); t.text = todo.text; t.cat = catMatch ? todo.cat : '临时事务';
       t.iv = setInterval(renderRecTimer, 1000);
       renderDashboard(); renderPlan(); renderRecTimer();
       toast('计时开始 ⏱️ ' + todo.text);
@@ -1749,7 +1770,7 @@ document.addEventListener('click', e => {
       if (t.running){ toast('已有计时进行中，点右下角的计时条结束', 'warn'); break; }
       const text = $('#rec-text').value.trim();
       if (!text){ toast('写一下要做什么', 'warn'); return; }
-      t.running = true; t.start = Date.now(); t.date = todayISO(); t.text = text; t.cat = $('#rec-cat').value || '临时事务';
+      t.running = true; t.start = Date.now(); t.acc = 0; t.paused = false; t.date = todayISO(); t.text = text; t.cat = $('#rec-cat').value || '临时事务';
       t.iv = setInterval(renderRecTimer, 1000);
       closeRecModal();
       renderDashboard(); renderPlan(); renderRecTimer();
