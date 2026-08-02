@@ -161,6 +161,18 @@ input[type="month"]{width:160px}
 .item{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--border)}
 .item:last-child{border-bottom:none}
 .cat-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+/* 苹果式目标点选 */
+.goal-pill{padding:3px 10px;font-size:12px;border-radius:14px;border:1px solid var(--border);background:var(--card);color:var(--text2);cursor:pointer;transition:all .15s}
+.goal-pill:hover{border-color:var(--accent)}
+.goal-pill.sel{background:var(--accent);border-color:var(--accent);color:#fff}
+/* 本周时间分布 */
+.wkrev-cat{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
+.wkrev-cat .grow .progress{height:8px;margin-top:3px}
+.wkrev-days{display:flex;gap:6px;margin-top:10px;align-items:flex-end;height:72px}
+.wkrev-day{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:flex-end}
+.wkrev-day .bar{width:100%;max-width:34px;background:var(--accent-soft);border-radius:5px;min-height:3px}
+.wkrev-day .bar.has{background:var(--accent)}
+.wkrev-day span{font-size:11px;color:var(--text2)}
 .wkline .progress{flex:1;margin:0}
 .wkline-txt{font-size:12.5px;color:var(--text2);white-space:nowrap;min-width:96px;text-align:right}
 /* ===== 番茄钟 ===== */
@@ -676,6 +688,38 @@ function renderDashboard(){
       <button class="del" data-act="todo-del" data-id="${t.id}">✕</button>
     </div>`).join('');
 
+  // 本周时间分布（周复盘）
+  const wLogs = (S.log || []).filter(l => wkDays.includes(l.date));
+  const wCat = {};
+  wLogs.forEach(l => { const c = l.cat || '临时事务'; wCat[c] = (wCat[c] || 0) + (l.dur || 0); });
+  const wTotal = Object.values(wCat).reduce((a, b) => a + b, 0);
+  const wStudy = S.studyLog.filter(l => wkDays.includes(l.date)).reduce((a, b) => a + b.minutes, 0);
+  const p0 = new Date(wkDays[0]); p0.setDate(p0.getDate() - 7);
+  const prevWkDays = weekDays(weekKey(toISO(p0)));
+  const prevTotal = (S.log || []).filter(l => prevWkDays.includes(l.date)).reduce((a, b) => a + (b.dur || 0), 0);
+  const maxCat = Math.max.apply(null, Object.values(wCat).concat([1]));
+  const wCatHtml = Object.entries(wCat).sort((a, b) => b[1] - a[1]).map(([c, m]) => `
+    <div class="wkrev-cat">
+      <i class="cat-dot" style="background:${catColor(c)}"></i>
+      <div class="grow"><div class="t">${esc(c)}</div><div class="progress"><div class="fill" style="width:${(m / maxCat * 100).toFixed(0)}%;background:${catColor(c)}"></div></div></div>
+      <b>${(m / 60).toFixed(1)}h</b>
+    </div>`).join('');
+  const dnames = ['六','日','一','二','三','四','五'];
+  const maxDay = Math.max.apply(null, wkDays.map(d => (S.log || []).filter(l => l.date === d).reduce((a, b) => a + (b.dur || 0), 0)).concat([1]));
+  const dayHtml = wkDays.map(d => {
+    const m = (S.log || []).filter(l => l.date === d).reduce((a, b) => a + (b.dur || 0), 0);
+    const dow = (new Date(d + 'T00:00').getDay() + 6) % 7;
+    return `<div class="wkrev-day"><div class="bar ${m > 0 ? 'has' : ''}" style="height:${Math.max(3, m / maxDay * 50)}px" title="${d} ${(m / 60).toFixed(1)}h"></div><span>${dnames[dow]}</span></div>`;
+  }).join('');
+  const weekReview = `<div class="card" style="margin-top:14px">
+    <h3>📊 本周时间分布（${wkDays[0].slice(5)} ~ ${wkDays[6].slice(5)}）</h3>
+    ${wTotal > 0 ? `
+      <div>${wCatHtml}</div>
+      <div class="wkrev-days">${dayHtml}</div>
+      <div class="hint" style="margin-top:8px">🍅 学习 ${(wStudy / 60).toFixed(1)}h · 有记录共 ${(wTotal / 60).toFixed(1)}h${prevTotal > 0 ? ` · 上周 ${(prevTotal / 60).toFixed(1)}h（${wTotal >= prevTotal ? '↑' : '↓'} ${(Math.abs(wTotal - prevTotal) / 60).toFixed(1)}h）` : ''}</div>
+    ` : `<div class="empty" style="padding:14px"><span class="big">📊</span>本周还没有时间记录<br><span style="font-size:13px;color:var(--text2)">点日历任意位置记一笔，或开始计时，这里就会长出来</span></div>`}
+  </div>`;
+
   $('#body-dashboard').innerHTML = `
   <div class="dash-main">
     <div class="dash-left">
@@ -709,6 +753,7 @@ function renderDashboard(){
       </div>
     </div>
   </div>
+  ${weekReview}
   <div class="card">
     <h3>⚡ 快捷操作</h3>
     <div class="row" style="margin-bottom:0;flex-wrap:wrap">
@@ -1051,10 +1096,11 @@ function renderHabits(){
       </div>
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <div class="habit-grid">${cells}</div>
-        <div style="font-size:12.5px;color:var(--text2);line-height:1.8">
-          每周目标：<select data-act="habit-goal" data-id="${h.id}" style="padding:3px 6px;font-size:12.5px">
-            ${[1,2,3,4,5,6,7].map(n => `<option value="${n}" ${goal === n ? 'selected' : ''}>${n} 次</option>`).join('')}
-          </select><br>点「＋」完成今天的打卡
+        <div style="font-size:12.5px;color:var(--text2);line-height:1.9">
+          每周目标（点数字直接改）：<br>
+          <span style="display:flex;gap:4px;margin-top:2px">
+            ${[1,2,3,4,5,6,7].map(n => `<button class="goal-pill ${goal === n ? 'sel' : ''}" data-act="habit-goal" data-id="${h.id}" data-g="${n}" title="${n === 7 ? '每天' : '每周 ' + n + ' 次'}">${n === 7 ? '天' : n}</button>`).join('')}
+          </span>
         </div>
       </div>
     </div>`;
@@ -1530,6 +1576,7 @@ document.addEventListener('click', e => {
   const id = actEl.dataset.id;
 
   switch (act){
+    case 'habit-goal': { const h = S.habits.find(x => x.id === id); if (h){ h.goal = +actEl.dataset.g; save(); renderHabits(); renderDashboard(); toast('已改为' + (h.goal === 7 ? '每天打卡' : '每周 ' + h.goal + ' 次')); } break; }
     case 'todo-toggle': { const t = S.todos.find(x => x.id === id); if (t){ t.done = !t.done; save(); renderTodos(); renderDashboard(); } break; }
     case 'dash-todo-open': {
       $('#todo-new-text').value = '';
@@ -1760,7 +1807,6 @@ document.addEventListener('change', e => {
   switch (act){
     case 'tl-date': { UI.tlDate = el.value; renderPlan(); break; }
     case 'ledger-month': UI.ledgerMonth = el.value; renderLedger(); break;
-    case 'habit-goal': { const h = S.habits.find(x => x.id === el.dataset.id); if (h){ h.goal = +el.value; save(); renderHabits(); } break; }
     case 'subj-target': { const s = S.subjects.find(x => x.id === el.dataset.id); if (s){ s.target = parseFloat(el.value) || 0; save(); renderStudy(); renderDashboard(); } break; }
     case 'pomo-subj': UI.pomo.subj = el.value; break;
     case 'bg-text-color': {
