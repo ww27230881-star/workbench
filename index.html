@@ -365,6 +365,17 @@ body.custom-text .vtl-ad-label,body.custom-text .legend{color:#677084}
 </div>
 <div id="toasts"></div>
 <div id="rec-timer-pill" data-act="rec-timer" title="点击结束并保存"></div>
+<div class="modal-mask" id="note-mask" style="display:none">
+  <div class="modal-box">
+    <h3>💬 这次任务有什么感想？</h3>
+    <div id="note-task" style="font-size:13px;color:#8e8e93;margin-bottom:8px"></div>
+    <textarea id="note-text" rows="3" style="width:100%;margin-bottom:12px;resize:vertical" placeholder="比如：开头很难，坚持下来发现没那么难…（不想写就跳过）"></textarea>
+    <div class="row" style="margin-bottom:0;justify-content:flex-end">
+      <button class="btn" data-act="note-skip">跳过</button>
+      <button class="btn primary" data-act="note-save">✓ 保存感想</button>
+    </div>
+  </div>
+</div>
 <div class="modal-mask" id="rec-mask" style="display:none">
   <div class="modal-box">
     <h3 id="rec-title" style="margin-bottom:12px">记录这个时间在做什么</h3>
@@ -377,6 +388,7 @@ body.custom-text .vtl-ad-label,body.custom-text .legend{color:#677084}
       </div>
       <div class="row" style="margin:8px 0"><span style="font-size:13px;color:var(--text2)">分类</span><select id="rec-cat" style="flex:1"></select></div>
       <input type="text" id="rec-text" class="grow" style="width:100%;margin-bottom:12px" placeholder="比如：背单词、打游戏、发呆…" data-enter="#btn-rec-save">
+      <input type="text" id="rec-note" style="width:100%;margin-bottom:12px" placeholder="💬 感想（可选）：这次做得怎么样…">
       <div class="hint" style="margin-bottom:12px">⏱️ 想记录正在做的事？<button class="btn small" data-act="rec-start-timer" style="margin-left:4px">从现在开始计时</button></div>
     </div>
     <div class="row" style="margin-bottom:0;justify-content:flex-end">
@@ -754,6 +766,12 @@ function renderDashboard(){
     const dow = (new Date(d + 'T00:00').getDay() + 6) % 7;
     return `<div class="wkrev-day"><div class="bar ${m > 0 ? 'has' : ''}" style="height:${Math.max(3, m / maxDay * 50)}px" title="${d} ${(m / 60).toFixed(1)}h"></div><span>${dnames[dow]}</span></div>`;
   }).join('');
+  const wkNotes = wLogs.filter(l => l.note).sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
+  const wkNotesHtml = wkNotes.length ? `
+    <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:6px">💬 本周感想（${wkNotes.length}）</div>
+      ${wkNotes.slice(-10).reverse().map(l => `<div style="font-size:12.5px;line-height:1.65;margin:4px 0"><span class="badge gray" style="margin-right:6px;font-size:11px">${esc(l.date.slice(5))} ${esc(l.time)} ${esc(l.text)}</span>${esc(l.note)}</div>`).join('')}
+    </div>` : '';
   const weekReview = `<div class="card" style="margin-top:14px">
     <h3>📊 本周时间分布（${wkDays[0].slice(5)} ~ ${wkDays[6].slice(5)}）</h3>
     ${wTotal > 0 ? `
@@ -761,6 +779,7 @@ function renderDashboard(){
       <div class="wkrev-days">${dayHtml}</div>
       <div class="hint" style="margin-top:8px">🍅 学习 ${(wStudy / 60).toFixed(1)}h · 有记录共 ${(wTotal / 60).toFixed(1)}h${prevTotal > 0 ? ` · 上周 ${(prevTotal / 60).toFixed(1)}h（${wTotal >= prevTotal ? '↑' : '↓'} ${(Math.abs(wTotal - prevTotal) / 60).toFixed(1)}h）` : ''}</div>
     ` : `<div class="empty" style="padding:14px"><span class="big">📊</span>本周还没有时间记录<br><span style="font-size:13px;color:var(--text2)">点日历任意位置记一笔，或开始计时，这里就会长出来</span></div>`}
+    ${wkNotesHtml}
   </div>`;
 
   $('#body-dashboard').innerHTML = `
@@ -826,6 +845,7 @@ function openRecModal(date, time){
   $('#rec-time').value = t0;
   $('#rec-time-end').value = endTime(t0, 30);
   $('#rec-text').value = '';
+  $('#rec-note').value = '';
   $('#rec-mask').style.display = 'flex';
   setTimeout(() => $('#rec-text').focus(), 60);
 }
@@ -968,6 +988,14 @@ function renderTimeline(date){
       <div class="prow"><span class="pl"><i class="lg" style="background:${catColor(c)};width:9px;height:9px;border-radius:50%;display:inline-block"></i> ${esc(c)}</span><div class="progress"><div class="fill" style="width:${Math.min(100, catSum[c] / catTotal * 100)}%"></div></div><span class="pv">${(catSum[c] / 60).toFixed(1)}h</span></div>`).join('')}
     <div class="hint">共 ${(catTotal / 60).toFixed(1)} 小时有记录</div>
   </div>` : '';
+  // 当日感想（写过的感想按时间列出）
+  const dayNotes = (S.log || []).filter(l => l.date === date && l.note).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  const notesHtml = dayNotes.length ? `
+  <div class="card" style="margin-top:14px">
+    <h3>💬 今日感想（${dayNotes.length}）</h3>
+    ${dayNotes.map(l => `<div style="font-size:13px;line-height:1.7;margin:4px 0"><span class="badge gray" style="margin-right:6px">${esc(l.time)} ${esc(l.text)}</span>${esc(l.note)}</div>`).join('')}
+    <div class="hint">感想写在计时结束后的弹窗里，或点时间轴上的记录条补写</div>
+  </div>` : '';
 
   return `
   <div class="card" style="margin-bottom:14px">
@@ -1005,7 +1033,8 @@ function renderTimeline(date){
       </div>
     </div>` : `<div class="empty" style="padding:36px"><span class="big">⏱️</span>这一天还没有带时间的记录<br><span style="font-size:13px;color:var(--text2)">点击上方空白时间轴任意位置，记录这个时间在做什么；或在总览的「Reminder」添加带时间的提醒事项</span></div>`}
   </div>
-  ${catHtml}`;
+  ${catHtml}
+  ${notesHtml}`;
 }
 function renderWeeklyPlan(wk, today){
   const wkData = S.week[wk] || {goal: '', days: {}};
@@ -1730,12 +1759,32 @@ document.addEventListener('click', e => {
         // 结束并保存（含暂停累计）
         const dur = Math.max(1, Math.round((t.acc + (t.paused ? 0 : (Date.now() - t.start))) / 60000));
         const st = new Date(t.start);
-        S.log.push({id: uid(), date: t.date || todayISO(), time: pad(st.getHours()) + ':' + pad(st.getMinutes()), text: t.text, cat: t.cat || '临时事务', dur, createdAt: Date.now()});
+        const newId = uid();
+        S.log.push({id: newId, date: t.date || todayISO(), time: pad(st.getHours()) + ':' + pad(st.getMinutes()), text: t.text, cat: t.cat || '临时事务', dur, note: '', createdAt: Date.now()});
         clearInterval(t.iv);
         UI.recTimer = {running:false, start:0, acc:0, paused:false, date:'', text:'', cat:'', iv:null};
         save(); renderDashboard(); renderPlan(); renderRecTimer();
         toast('已保存：' + t.text + '（' + dur + ' 分钟）⏱️');
+        // 弹感想（可选）
+        UI.pendingNote = newId;
+        $('#note-task').textContent = t.text + ' · ' + dur + ' 分钟';
+        $('#note-text').value = '';
+        $('#note-mask').style.display = 'flex';
+        setTimeout(() => $('#note-text').focus(), 60);
       }
+      break;
+    }
+    case 'note-save': {
+      const l = (S.log || []).find(x => x.id === UI.pendingNote);
+      if (l){ l.note = $('#note-text').value.trim(); save(); renderDashboard(); renderPlan(); renderTimeline && renderTimeline(); }
+      UI.pendingNote = null;
+      $('#note-mask').style.display = 'none';
+      if (l && l.note) toast('感想已保存 💬');
+      break;
+    }
+    case 'note-skip': {
+      UI.pendingNote = null;
+      $('#note-mask').style.display = 'none';
       break;
     }
     case 'rec-timer-pause': {
@@ -1785,6 +1834,7 @@ document.addEventListener('click', e => {
       openRecModal(l.date, l.time);
       $('#rec-time-end').value = endTime(l.time, l.dur);
       $('#rec-text').value = l.text;
+      $('#rec-note').value = l.note || '';
       $('#rec-cat').value = l.cat || '临时事务';
       break;
     }
@@ -1802,12 +1852,12 @@ document.addEventListener('click', e => {
       }
       if (UI.editLogId){
         const l = (S.log || []).find(x => x.id === UI.editLogId);
-        if (l){ l.time = time; l.dur = dur; l.text = text; l.cat = $('#rec-cat').value || '临时事务'; }
+        if (l){ l.time = time; l.dur = dur; l.text = text; l.cat = $('#rec-cat').value || '临时事务'; l.note = $('#rec-note').value.trim(); }
         UI.editLogId = null;
         toast('已更新 🕐');
       } else {
         if (!S.log) S.log = [];
-        S.log.push({id: uid(), date: UI.recDate || todayISO(), time, text, cat: $('#rec-cat').value || '临时事务', dur, createdAt: Date.now()});
+        S.log.push({id: uid(), date: UI.recDate || todayISO(), time, text, cat: $('#rec-cat').value || '临时事务', dur, note: $('#rec-note').value.trim(), createdAt: Date.now()});
         toast('已记录 🕐');
       }
       closeRecModal();
