@@ -1557,6 +1557,8 @@ function addWeek(iso){
 }
 function parseLedgerMsg(txt){
   const s = txt.trim();
+  const cnNum = {一:1, 二:2, 三:3, 四:4, 五:5, 六:6, 七:7, 八:8, 九:9, 十:10, 十一:11, 十二:12};
+  const cn2num = t => cnNum[t] || parseInt(t, 10) || 0;
   let date = todayISO();
   if (/昨天/.test(s)){ const d = new Date(); d.setDate(d.getDate() - 1); date = toISO(d); }
   else if (/前天/.test(s)){ const d = new Date(); d.setDate(d.getDate() - 2); date = toISO(d); }
@@ -1570,9 +1572,32 @@ function parseLedgerMsg(txt){
       if (m[1] === '上周') diff -= 7;
       const d = new Date(); d.setDate(d.getDate() + diff);
       date = toISO(d);
+    } else {
+      // 月份：上个月 / 这个月 / X月（如 7月、七月、7月份）
+      const now = new Date();
+      let targetMonth = null;
+      const lm = s.match(/(上个月|上月|这个月|今月)/);
+      if (lm){ targetMonth = now.getMonth() + (lm[0].includes('上') ? -1 : 0); }
+      else {
+        const cm = s.match(/(\d{1,2})月|([一二三四五六七八九十]{1,3})月/);
+        if (cm){
+          const mv = cm[1] ? parseInt(cm[1], 10) : cn2num(cm[2]);
+          if (mv >= 1 && mv <= 12) targetMonth = mv - 1;
+        }
+      }
+      if (targetMonth !== null){
+        const dm = s.match(/(\d{1,2})[日号]|([一二三四五六七八九十]{1,3})[日号]/);
+        let day = dm ? (dm[1] ? parseInt(dm[1], 10) : cn2num(dm[2])) : 1;
+        if (!day || day < 1) day = 1;
+        const maxDay = new Date(now.getFullYear(), targetMonth + 1, 0).getDate();
+        day = Math.min(day, maxDay);
+        date = toISO(new Date(now.getFullYear(), targetMonth, day));
+      }
     }
   }
-  const amtM = s.match(/(\d+(?:\.\d{1,2})?)/);
+  // 金额：先屏蔽日期里的数字（6月/15号），避免把月份当金额
+  const sAmt = s.replace(/\d{1,2}\s*月|\d{1,2}\s*[日号]/g, ' ').replace(/[一二三四五六七八九十]{1,3}\s*月/g, ' ');
+  const amtM = sAmt.match(/(\d+(?:\.\d{1,2})?)/);
   const amount = amtM ? parseFloat(amtM[1]) : 0;
   const isIncome = /工资|兼职|红包|赚|收入|奖学金|报销/.test(s);
   let cat = '其他';
@@ -1583,8 +1608,14 @@ function parseLedgerMsg(txt){
     const exp = [['餐饮', /吃|饭|餐|奶茶|咖啡|早|午|晚|外卖|零食|夜宵|火锅|面|粉|汉堡|炸鸡|水果/], ['交通', /车|公交|地铁|打车|出租|加油|高铁|机票|停车|单车/], ['学习', /书|课|学习|培训|文具|考试|报班/], ['医疗', /药|医院|看病|体检|挂号/], ['娱乐', /游戏|电影|娱乐|唱歌|酒吧|旅游|门票|视频会员/], ['购物', /买|购物|淘宝|衣服|鞋|包|京东|拼多多|超市/], ['日用', /日用品|纸巾|洗|牙膏|牙刷|垃圾袋/]];
     for (const c of exp){ if (c[1].test(s)){ cat = c[0]; break; } }
   }
-  let note = s.replace(/(\d+(?:\.\d{1,2})?)\s*(块|元|钱)?/g, ' ').replace(/昨天|前天|上?周[一二三四五六日天]/g, ' ').replace(/[，。,.！!？?、]/g, ' ').replace(/\s+/g, ' ').trim();
-  if (!note || note === cat) note = '';
+  // 备注：先清日期（月/日/号/昨天/上周X），再清金额，最后清标点
+  let note = s
+    .replace(/(上个月|上月|这个月|今月|\d{1,2}\s*月|\d{1,2}\s*[日号]|[一二三四五六七八九十]{1,3}\s*月(?:[一二三四五六七八九十]{1,3}[日号])?)/g, ' ')
+    .replace(/(\d+(?:\.\d{1,2})?)\s*(块|元|钱)?/g, ' ')
+    .replace(/昨天|前天|上?周[一二三四五六日天]/g, ' ')
+    .replace(/[，。,.！!？?、]/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+  if (!note || note === cat || /^(赚|收入|工资|兼职|红包|奖学金|报销)$/.test(note)) note = '';
   return {type: isIncome ? 'income' : 'expense', amount, cat, note, date};
 }
 function addLedger(){
