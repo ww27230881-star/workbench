@@ -1245,10 +1245,10 @@ function renderSettings(){
     </div>
     <div class="row" style="margin-top:4px">
       <span style="font-size:13px;color:var(--text2);white-space:nowrap">🪟 板块透明度（透玻璃）</span>
-      <input type="range" min="0" max="80" value="${Math.round((bg.panelAlpha || 0) * 100)}" data-act="bg-panel" style="flex:1;max-width:240px">
+      <input type="range" min="0" max="100" value="${Math.round((bg.panelAlpha || 0) * 100)}" data-act="bg-panel" style="flex:1;max-width:240px">
       <span id="bg-panel-val" style="font-size:13px;color:var(--text2);width:38px">${Math.round((bg.panelAlpha || 0) * 100)}%</span>
     </div>
-    <div style="font-size:12.5px;color:var(--text2)">上传的图片会自动压缩（最长边 1400px），设置会随云同步到其他设备。深色/浅色模式下蒙层颜色会自动适配。板块透明度调高后背景图会透出来（透明玻璃效果，不模糊），输入框保持不透明保证可读。</div>
+    <div style="font-size:12.5px;color:var(--text2)">上传的图片会自动压缩（最长边 1400px），设置会随云同步到其他设备。深色/浅色模式下蒙层颜色会自动适配。透玻璃透明度越高壁纸越清楚，但文字会越难看清——拉高透明度的同时建议把上方「遮罩」也调高一点（如 50%）来衬文字。</div>
   </div>
   <div class="card" style="max-width:640px;margin-top:14px">
     <h3 style="margin-bottom:10px">💾 数据备份</h3>
@@ -1904,7 +1904,7 @@ function applyBg(){
 }
 function applyPanelAlpha(){
   const doc = document.documentElement;
-  const a = Math.max(0.15, Math.min(1, 1 - ((S.settings.bg && S.settings.bg.panelAlpha != null) ? S.settings.bg.panelAlpha : 0)));
+  const a = Math.max(0, Math.min(1, 1 - ((S.settings.bg && S.settings.bg.panelAlpha != null) ? S.settings.bg.panelAlpha : 0)));
   const cardColor = getComputedStyle(doc).getPropertyValue('--card').trim();
   let rgba = cardColor;
   const hex = /^#([0-9a-f]{6})$/i.exec(cardColor);
