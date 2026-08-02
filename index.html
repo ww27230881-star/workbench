@@ -1540,6 +1540,7 @@ function syncSchedulePush(){
 }
 async function syncPush(){
   if (!syncEnabled() || Sync.pushing) return;
+  if (isPristine(S)) return; // 本地是空数据时绝不推送（防止空设备覆盖云端真数据）
   Sync.pushing = true;
   try{
     const content = JSON.stringify({updatedAt: localUpdatedAt, data: S});
@@ -1550,6 +1551,11 @@ async function syncPush(){
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     Sync.dirty = false;
+    try{
+      const g = await res.json();
+      if (g && g.updated_at){ localUpdatedAt = Date.parse(g.updated_at); }
+      localStorage.setItem(LS_UPDATED, String(localUpdatedAt));
+    }catch(e){}
     try{ localStorage.setItem(LS_SYNC_LAST, String(localUpdatedAt)); }catch(e){}
   }catch(e){
     console.warn('云同步推送失败：', e);
@@ -1559,7 +1565,14 @@ async function syncPush(){
   }
 }
 function isPristine(s){
-  return !s.todos.length && !s.ledger.length && !s.habits.length && !s.subjects.length && !s.studyLog.length && !s.reminders.length && !s.savings.goal && !s.savings.records.length && !Object.keys(s.daily).length && !Object.keys(s.week).length;
+  const st = s.settings || {};
+  const bg = st.bg || {};
+  const catsDefault = JSON.stringify(TIME_CATS.map(c => ({name: c.name, color: c.color})));
+  return !s.todos.length && !s.ledger.length && !s.habits.length && !s.subjects.length && !s.studyLog.length && !s.reminders.length && !s.savings.goal && !s.savings.records.length && !Object.keys(s.daily).length && !Object.keys(s.week).length
+    && !(s.log || []).length
+    && (bg.type === 'none' || !bg.value)
+    && !Object.keys(st.colors || {}).length
+    && (!st.cats || !st.cats.length || JSON.stringify(st.cats) === catsDefault);
 }
 function normalizeData(d){
   const n = Object.assign(defaults(), d);
@@ -1577,7 +1590,11 @@ async function syncPull(silent){
     if (!f || !f.content) throw new Error('未找到同步文件');
     const blob = JSON.parse(f.content);
     if (!blob || !blob.data || !blob.updatedAt) throw new Error('云端数据格式不对');
-    if (isPristine(S) || blob.updatedAt > localUpdatedAt){
+    if (isPristine(blob.data)){
+      // 云端是空数据：本地有数据就推上去修复云端（防止空数据覆盖真数据）
+      if (!isPristine(S)){ syncPush(); if (!silent) toast('云端是空的，已把你的数据推上去 ✅'); }
+      else if (!silent) toast('云端和本地都是空的');
+    } else if (isPristine(S) || blob.updatedAt > localUpdatedAt){
       if (!isPristine(S) && blob.updatedAt > localUpdatedAt){
         try{ localStorage.setItem(LS_BACKUP, JSON.stringify(S)); }catch(e){}
         toast('⚠️ 云端有更新数据，本地已自动备份', 'warn');
