@@ -635,7 +635,7 @@ function renderDashboard(){
     ? wkItemList.map(x => `<div class="tl-item"><span class="tl-time">${x.iso.slice(5)}</span><span class="t">${esc(x.txt)}</span></div>`).join('')
     : `<div class="empty" style="padding:10px"><span class="big">🗓️</span>本周还没写计划<br><a href="#" data-nav-jump="plan" style="color:var(--accent);font-size:13px">去周计划写 →</a></div>`;
 
-  // 今日待办列表
+  // Reminder 列表
   const todoItems = [...tds].sort((a, b) => {
     if (a.done !== b.done) return a.done ? 1 : -1;
     const at = a.time || '99:99', bt = b.time || '99:99';
