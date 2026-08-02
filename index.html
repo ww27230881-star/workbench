@@ -634,6 +634,7 @@ const UI = {
   recDate: todayISO(),
   recTimer: {running:false, start:0, acc:0, paused:false, date:'', text:'', cat:'', iv:null},
   ledgerMonth: todayISO().slice(0, 7),
+  ledgerDate: todayISO(),
   ledgerType: 'expense',
   ledgerCat: '餐饮',
   todoFilter: 'open',
@@ -1097,17 +1098,18 @@ function renderLedger(){
   const exp = monthList.filter(l => l.type === 'expense').reduce((a, b) => a + b.amount, 0);
   const inc = monthList.filter(l => l.type === 'income').reduce((a, b) => a + b.amount, 0);
   const today = todayISO();
-  const tExp = S.ledger.filter(l => l.type === 'expense' && l.date === today).reduce((a, b) => a + b.amount, 0);
+  const date = UI.ledgerDate || today;
+  const dExp = S.ledger.filter(l => l.type === 'expense' && l.date === date).reduce((a, b) => a + b.amount, 0);
   const daysInMonth = new Date(+mk.slice(0,4), +mk.slice(5,7), 0).getDate();
   const avg = exp / daysInMonth;
   const cats = CAT_EXP.map(c => ({c, v: monthList.filter(l => l.type === 'expense' && l.cat === c).reduce((a, b) => a + b.amount, 0)}))
     .filter(x => x.v > 0).sort((a, b) => b.v - a.v);
   const maxV = Math.max(1, ...cats.map(x => x.v));
-  const todayList = [...S.ledger].filter(l => l.date === today).sort((a, b) => b.id.localeCompare(a.id));
+  const dayList = [...S.ledger].filter(l => l.date === date).sort((a, b) => b.id.localeCompare(a.id));
   const catsList = UI.ledgerType === 'expense' ? CAT_EXP : CAT_INC;
   $('#body-ledger').innerHTML = `
   <div class="cards">
-    <div class="card"><h3>💸 今日支出</h3><div class="stat-num" style="color:var(--danger)">${money(tExp)}</div></div>
+    <div class="card"><h3>💸 ${date === today ? '今日支出' : fmtDateCN(date) + ' 支出'}</h3><div class="stat-num" style="color:var(--danger)">${money(dExp)}</div></div>
     <div class="card"><h3>📉 本月支出</h3><div class="stat-num" style="color:var(--danger)">${money(exp)}</div><div class="hint">日均 ${money(avg)}</div></div>
     <div class="card"><h3>📈 本月收入</h3><div class="stat-num" style="color:var(--ok)">${money(inc)}</div></div>
     <div class="card"><h3>⚖️ 本月结余</h3><div class="stat-num" style="color:${inc - exp >= 0 ? 'var(--ok)' : 'var(--danger)'}">${money(inc - exp)}</div></div>
@@ -1123,16 +1125,21 @@ function renderLedger(){
         <input type="text" id="ledger-note" placeholder="备注（可选）" data-enter="#btn-ledger-add">
         <button class="btn primary" id="btn-ledger-add" data-act="ledger-add">＋ 记一笔</button>
       </div>
-      <div style="font-size:12.5px;color:var(--text2);margin:2px 0 8px">📌 只记当天的账（${today}），月底自动汇总</div>
+      <div class="row" style="margin:6px 0 8px;font-size:12.5px;color:var(--text2)">
+        <span>📅 记到哪一天：</span>
+        <input type="date" id="ledger-date" data-act="ledger-date" value="${date}" style="width:auto;padding:5px 8px">
+        <button class="btn small" data-act="ledger-today" ${date === today ? 'disabled' : ''}>今天</button>
+        <span style="margin-left:auto">默认今天，选过去日期 = 补记以前的账</span>
+      </div>
       <div class="cat-btns" id="ledger-cats">
         ${catsList.map(c => `<button class="cat-btn ${UI.ledgerCat === c ? 'sel' : ''}" data-act="ledger-cat" data-c="${c}">${CAT_ICO[c] || '📦'} ${c}</button>`).join('')}
       </div>
       <div style="margin-top:14px">
-        <h3 style="font-size:13.5px;color:var(--text2);margin-bottom:6px">📅 今日记录</h3>
-        ${todayList.length ? todayList.map(l => `
+        <h3 style="font-size:13.5px;color:var(--text2);margin-bottom:6px">📅 ${date === today ? '今日记录' : fmtDateCN(date) + ' 记录'}</h3>
+        ${dayList.length ? dayList.map(l => `
           <div class="item">
             <div class="lg-ico">${CAT_ICO[l.cat] || '📦'}</div>
-            <div class="grow"><div class="t">${esc(l.cat)}${l.note ? ' · ' + esc(l.note) : ''}</div><div class="meta">${l.type === 'expense' ? '支出' : '收入'}</div></div>
+            <div class="grow"><div class="t">${esc(l.cat)}${l.note ? ' · ' + esc(l.note) : ''}</div><div class="meta">${l.type === 'expense' ? '支出' : '收入'} · ${esc(l.date)}</div></div>
             <div class="amt ${l.type}">${l.type === 'expense' ? '-' : '+'}${money(l.amount)}</div>
             <button class="del" data-act="ledger-del" data-id="${l.id}">✕</button>
           </div>`).join('')
@@ -1547,13 +1554,14 @@ function addWeek(iso){
 function addLedger(){
   const amt = parseFloat($('#ledger-amt').value);
   if (!amt || amt <= 0){ toast('请输入有效金额', 'warn'); return; }
+  const date = UI.ledgerDate || todayISO();
   S.ledger.push({
     id: uid(), type: UI.ledgerType, amount: amt, cat: UI.ledgerCat,
-    note: $('#ledger-note').value.trim(), date: todayISO(),
+    note: $('#ledger-note').value.trim(), date,
   });
   $('#ledger-amt').value = ''; $('#ledger-note').value = '';
   save(); renderLedger(); renderDashboard();
-  toast('已记账 ' + (UI.ledgerType === 'expense' ? '-' : '+') + money(amt));
+  toast('已记账 ' + (UI.ledgerType === 'expense' ? '-' : '+') + money(amt) + (date === todayISO() ? '' : '（' + date.slice(5) + '）'));
 }
 function addHabit(){
   const name = $('#habit-name').value.trim();
@@ -1902,6 +1910,7 @@ document.addEventListener('click', e => {
     case 'week-add': addWeek(actEl.dataset.date); break;
 
     case 'ledger-type': UI.ledgerType = actEl.dataset.t; UI.ledgerCat = UI.ledgerType === 'expense' ? '餐饮' : '生活费'; renderLedger(); break;
+    case 'ledger-today': { UI.ledgerDate = todayISO(); renderLedger(); break; }
     case 'ledger-cat': UI.ledgerCat = actEl.dataset.c; document.querySelectorAll('#ledger-cats .cat-btn').forEach(b => b.classList.toggle('sel', b === actEl)); break;
     case 'ledger-del': { S.ledger = S.ledger.filter(x => x.id !== id); save(); renderLedger(); renderDashboard(); break; }
 
@@ -2081,6 +2090,7 @@ document.addEventListener('change', e => {
     }
     case 'tl-date': { UI.tlDate = el.value; renderPlan(); break; }
     case 'ledger-month': UI.ledgerMonth = el.value; renderLedger(); break;
+    case 'ledger-date': { UI.ledgerDate = el.value || todayISO(); renderLedger(); break; }
     case 'subj-target': { const s = S.subjects.find(x => x.id === el.dataset.id); if (s){ s.target = parseFloat(el.value) || 0; save(); renderStudy(); renderDashboard(); } break; }
     case 'pomo-subj': UI.pomo.subj = el.value; break;
     case 'bg-text-color': {
