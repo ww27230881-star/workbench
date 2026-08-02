@@ -221,6 +221,10 @@ input[type="month"]{width:160px}
 .vtl-ev.t-todo{border-left-color:var(--warn)}
 .vtl-ev.t-todo.done{border-left-color:var(--ok);opacity:.7;text-decoration:line-through;color:var(--text2)}
 .vtl-ev.t-study{border-left-color:#9365e0}
+.vtl-ev.t-log{border-left-color:#0ea5a4;background:rgba(14,165,164,.08)}
+.vtl-ev .ev-x{position:absolute;right:4px;top:1px;font-size:11px;color:var(--text2);cursor:pointer;opacity:0;padding:0 3px;z-index:3}
+.vtl-ev:hover .ev-x{opacity:1}
+.vtl-ev .ev-x:hover{color:var(--danger)}
 .vtl-now{position:absolute;left:0;right:0;height:2px;background:var(--danger);z-index:5;border-radius:2px}
 .vtl-now::before{content:'';position:absolute;left:-6px;top:-4px;width:10px;height:10px;border-radius:50%;background:var(--danger);box-shadow:0 0 0 2px rgba(221,75,75,.25)}
 .vtl-now-tag{position:absolute;left:10px;top:-10px;background:var(--danger);color:#fff;font-size:10.5px;padding:1px 7px;border-radius:8px;font-weight:700;white-space:nowrap}
@@ -251,6 +255,10 @@ input[type="month"]{width:160px}
 .wvtl-ev.t-todo{border-left-color:var(--warn)}
 .wvtl-ev.t-todo.done{border-left-color:var(--ok);opacity:.6;text-decoration:line-through}
 .wvtl-ev.t-study{border-left-color:#9365e0}
+.wvtl-ev.t-log{border-left-color:#0ea5a4;background:rgba(14,165,164,.10)}
+.wvtl-ev .ev-x{position:absolute;right:2px;top:0;font-size:10px;color:var(--text2);cursor:pointer;opacity:0;padding:0 3px;z-index:3}
+.wvtl-ev:hover .ev-x{opacity:1}
+.wvtl-ev .ev-x:hover{color:var(--danger)}
 .wvtl-now{position:absolute;left:0;right:0;height:2px;background:var(--danger);z-index:5}
 .wvtl-now::before{content:'';position:absolute;left:-4px;top:-4px;width:9px;height:9px;border-radius:50%;background:var(--danger)}
 .legend{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--text2);margin-right:14px}
@@ -258,6 +266,13 @@ input[type="month"]{width:160px}
 .lg.t-plan{background:var(--accent)}
 .lg.t-todo{background:var(--warn)}
 .lg.t-study{background:#9365e0}
+.lg.t-log{background:#0ea5a4}
+/* ===== 弹窗 ===== */
+.modal-mask{position:fixed;inset:0;background:rgba(10,14,22,.45);z-index:80;display:flex;align-items:center;justify-content:center}
+.modal-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;width:min(420px,92vw);box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.modal-box h3{margin-bottom:12px}
+.modal-box .row{margin-bottom:12px}
+.modal-box .row:last-child{margin-bottom:0}
 /* ===== Toast ===== */
 #toasts{position:fixed;right:18px;bottom:18px;z-index:99;display:flex;flex-direction:column;gap:8px;max-width:340px}
 .toast{padding:11px 16px;border-radius:12px;background:var(--card);border:1px solid var(--border);box-shadow:0 6px 20px rgba(0,0,0,.14);font-size:14px;animation:slidein .2s;transition:opacity .3s}
@@ -307,6 +322,20 @@ input[type="month"]{width:160px}
   </main>
 </div>
 <div id="toasts"></div>
+<div class="modal-mask" id="rec-mask" style="display:none">
+  <div class="modal-box">
+    <h3>✏️ 记录这个时间在做什么</h3>
+    <div class="row">
+      <input type="time" id="rec-time" style="width:110px">
+      <input type="number" id="rec-dur" placeholder="时长（分钟，可选）" min="5" step="5" style="flex:1">
+    </div>
+    <input type="text" id="rec-text" class="grow" style="width:100%;margin-bottom:12px" placeholder="比如：背单词、打游戏、发呆…" data-enter="#btn-rec-save">
+    <div class="row" style="margin-bottom:0;justify-content:flex-end">
+      <button class="btn" id="btn-rec-cancel" data-act="rec-cancel">取消</button>
+      <button class="btn primary" id="btn-rec-save" data-act="log-add">✓ 保存记录</button>
+    </div>
+  </div>
+</div>
 <input type="file" id="import-file" accept=".json" style="display:none">
 <input type="file" id="bg-file-input" accept="image/*" style="display:none">
 
@@ -420,6 +449,7 @@ function defaults(){
     subjects: [],     // {id,name,target}
     studyLog: [],     // {id,subj,minutes,date,note}
     reminders: [],    // {id,text,type,date,time,intervalMin,enabled,firedOn,lastFired}
+    log: [],          // 时间记录 {id,date,time,text,dur}
     settings: {sound:true, notify:true, dark:false, pomodoro:{focus:25, short:5}, bg:{type:'none', value:'', overlay:0.5, text:'auto', panelAlpha:0}},
   };
 }
@@ -458,6 +488,7 @@ const UI = {
   planSub: 'daily',
   weekKey: weekKey(new Date()),
   tlDate: todayISO(),
+  recDate: todayISO(),
   dailyDate: todayISO(),
   ledgerMonth: todayISO().slice(0, 7),
   ledgerType: 'expense',
@@ -483,6 +514,7 @@ function dayEvents(date){
   (S.daily[date] || []).forEach(e => evts.push({time: e.time || '', text: e.text, type: 'plan', done: false, dur: 30}));
   S.todos.filter(t => t.date === date && t.time).forEach(t => evts.push({time: t.time, text: t.text, type: 'todo', done: t.done, dur: 30}));
   S.studyLog.filter(l => l.date === date).forEach(l => evts.push({time: l.time || '', text: l.subj + ' · ' + l.minutes + ' 分钟', type: 'study', done: false, dur: Math.max(20, l.minutes)}));
+  (S.log || []).filter(l => l.date === date).forEach(l => evts.push({time: l.time || '', text: l.text, type: 'log', done: false, dur: l.dur || 30, id: l.id}));
   return evts.sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
 }
 function renderDashboard(){
@@ -538,10 +570,10 @@ function renderDashboard(){
       const [h, m] = e.time.split(':').map(Number);
       const top = ((h * 60 + m) / 1440 * 100).toFixed(2);
       const hgt = Math.max((e.dur || 30) / 1440 * 100, 3.2).toFixed(2);
-      return `<div class="wvtl-ev t-${e.type} ${e.done ? 'done' : ''}" style="top:${top}%;height:${hgt}%" title="${esc(e.time)} ${esc(e.text)}"><span class="wvtl-et">${esc(e.time)}</span>${esc(e.text)}</div>`;
+      return `<div class="wvtl-ev t-${e.type} ${e.done ? 'done' : ''}" style="top:${top}%;height:${hgt}%" title="${esc(e.time)} ${esc(e.text)}"><span class="wvtl-et">${esc(e.time)}</span>${esc(e.text)}${e.type === 'log' ? `<span class="ev-x" data-act="log-del" data-id="${e.id}">✕</span>` : ''}</div>`;
     }).join('');
     const nowLine = isToday ? `<div class="wvtl-now" style="top:${(nowMin / 1440 * 100).toFixed(2)}%"></div>` : '';
-    return `<div class="wvtl-col ${isToday ? 'today' : ''}"><div class="wvtl-cells">${cellHtml}</div><div class="wvtl-evs">${evHtml}</div>${nowLine}</div>`;
+    return `<div class="wvtl-col ${isToday ? 'today' : ''}" data-act="tl-record" data-date="${iso}"><div class="wvtl-cells">${cellHtml}</div><div class="wvtl-evs">${evHtml}</div>${nowLine}</div>`;
   }).join('');
 
   // 周计划摘要（每天内容）
@@ -560,13 +592,13 @@ function renderDashboard(){
   <div class="card" style="margin-bottom:14px">
     <div class="row" style="justify-content:space-between;margin-bottom:8px">
       <h3 style="margin-bottom:0">📅 本周日历（${curWk.slice(5)} 起 · 第 ${dayOfWeek}/7 天）</h3>
-      <span style="font-size:12px;color:var(--text2);white-space:nowrap"><i class="lg t-plan"></i>安排 <i class="lg t-todo"></i>待办 <i class="lg t-study"></i>学习</span>
+      <span style="font-size:12px;color:var(--text2);white-space:nowrap"><i class="lg t-plan"></i>安排 <i class="lg t-todo"></i>待办 <i class="lg t-study"></i>学习 <i class="lg t-log"></i>记录<button class="btn small primary" data-act="log-now" style="margin-left:10px">✏️ 记录现在</button></span>
     </div>
     <div class="wvtl">
       <div class="wvtl-head"><div class="wvtl-axis-h"></div>${wkHead}</div>
       <div class="wvtl-body"><div class="wvtl-axis">${hourLabels}</div><div class="wvtl-cols">${wkCols}</div></div>
     </div>
-    <div class="hint" style="margin-top:10px">⏰ ${upcomingText}</div>
+    <div class="hint" style="margin-top:10px">👆 点击日历任意位置，记录那个时间在做什么 · ⏰ ${upcomingText}</div>
   </div>
   <div class="cards two-col">
     <div class="card">
@@ -594,6 +626,15 @@ function renderDashboard(){
     </div>
   </div>`;
 }
+function openRecModal(date, time){
+  UI.recDate = date || todayISO();
+  $('#rec-time').value = time || new Date().toTimeString().slice(0, 5);
+  $('#rec-dur').value = '';
+  $('#rec-text').value = '';
+  $('#rec-mask').style.display = 'flex';
+  setTimeout(() => $('#rec-text').focus(), 60);
+}
+function closeRecModal(){ $('#rec-mask').style.display = 'none'; }
 /* ----- 待办 ----- */
 function renderTodos(){
   const today = todayISO();
@@ -675,6 +716,7 @@ function renderTimeline(date){
   plan.forEach(e => evts.push({time: e.time || '', text: e.text, type: 'plan', done: false, dur: 30}));
   todos.forEach(t => evts.push({time: t.time, text: t.text, type: 'todo', done: t.done, dur: 30}));
   study.forEach(l => evts.push({time: l.time || '', text: l.subj + ' · ' + l.minutes + ' 分钟', type: 'study', done: false, dur: Math.max(20, l.minutes)}));
+  (S.log || []).filter(l => l.date === date).forEach(l => evts.push({time: l.time || '', text: l.text, type: 'log', done: false, dur: l.dur || 30, id: l.id}));
   evts.sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
 
   const minOf = t => { if (!t) return null; const [h, m] = t.split(':').map(Number); return h * 60 + m; };
@@ -688,9 +730,9 @@ function renderTimeline(date){
     const top = (minOf(e.time) / 1440 * 100).toFixed(2);
     const hgt = Math.max((e.dur || 30) / 1440 * 100, 3.2).toFixed(2);
     return `<div class="vtl-ev t-${e.type} ${e.done ? 'done' : ''}" style="top:${top}%;height:${hgt}%" title="${esc(e.time)} ${esc(e.text)}">
-      <span class="vtl-etime">${esc(e.time)}</span><span class="vtl-etxt">${esc(e.text)}</span></div>`;
+      <span class="vtl-etime">${esc(e.time)}</span><span class="vtl-etxt">${esc(e.text)}</span>${e.type === 'log' ? `<span class="ev-x" data-act="log-del" data-id="${e.id}">✕</span>` : ''}</div>`;
   }).join('');
-  const noTime = evts.filter(e => !e.time).map(e => `<span class="badge gray" style="margin-right:6px">${e.type === 'plan' ? '🗓️' : e.type === 'todo' ? '✅' : '📖'} ${esc(e.text)}</span>`).join('');
+  const noTime = evts.filter(e => !e.time).map(e => `<span class="badge gray" style="margin-right:6px">${e.type === 'plan' ? '🗓️' : e.type === 'todo' ? '✅' : e.type === 'log' ? '🕐' : '📖'} ${esc(e.text)}</span>`).join('');
   const studyMin = study.reduce((a, b) => a + b.minutes, 0);
   const tAll = S.todos.filter(t => t.date === date).length;
   const tDone = S.todos.filter(t => t.date === date && t.done).length;
@@ -718,19 +760,21 @@ function renderTimeline(date){
       <span class="legend"><i class="lg t-plan"></i>安排</span>
       <span class="legend"><i class="lg t-todo"></i>待办</span>
       <span class="legend"><i class="lg t-study"></i>学习</span>
+      <span class="legend"><i class="lg t-log"></i>记录</span>
       <span style="flex:1"></span>
-      <span style="font-size:12px;color:var(--text2)">日历式一天视图，红点线 = 现在</span>
+      <span style="font-size:12px;color:var(--text2)">👆 点击空白处记录 · 红点线 = 现在</span>
+      <button class="btn small primary" data-act="log-now">✏️ 记录现在</button>
     </div>
     ${noTime ? `<div class="vtl-allday"><span class="vtl-ad-label">全天</span>${noTime}</div>` : ''}
     ${evHtml ? `<div class="vtl">
       <div class="vtl-axis">${hourLabels}</div>
-      <div class="vtl-body">
+      <div class="vtl-body" data-act="tl-record" data-date="${date}">
         <div class="vtl-cells">${hourCells}</div>
         ${halfLines}
         <div class="vtl-evs">${evHtml}</div>
         ${nowLine}
       </div>
-    </div>` : `<div class="empty" style="padding:36px"><span class="big">⏱️</span>这一天还没有带时间的记录<br><span style="font-size:13px;color:var(--text2)">在「日计划」添加带时间的安排、给待办设时间、或在「学习」页记录时长，都会按时间出现在时间轴上</span></div>`}
+    </div>` : `<div class="empty" style="padding:36px"><span class="big">⏱️</span>这一天还没有带时间的记录<br><span style="font-size:13px;color:var(--text2)">点击上方空白时间轴任意位置，记录这个时间在做什么；或在「日计划」添加带时间的安排</span></div>`}
   </div>`;
 }
 function renderDailyPlan(date){
@@ -1473,6 +1517,33 @@ document.addEventListener('click', e => {
     case 'todo-toggle': { const t = S.todos.find(x => x.id === id); if (t){ t.done = !t.done; save(); renderTodos(); renderDashboard(); } break; }
     case 'todo-del': { S.todos = S.todos.filter(x => x.id !== id); save(); renderTodos(); renderDashboard(); break; }
     case 'todo-filter': UI.todoFilter = actEl.dataset.f; renderTodos(); break;
+    case 'tl-record': {
+      if (e.target.closest('.vtl-ev, .wvtl-ev, .wvtl-day-h')) return; // 点事件条/日期头不触发
+      const rect = actEl.getBoundingClientRect();
+      const y = Math.max(0, e.clientY - rect.top);
+      const mins = Math.min(1439, Math.round(y / rect.height * 1440 / 15) * 15);
+      openRecModal(actEl.dataset.date, pad(Math.floor(mins / 60)) + ':' + pad(mins % 60));
+      break;
+    }
+    case 'log-now': openRecModal(todayISO()); break;
+    case 'rec-cancel': closeRecModal(); break;
+    case 'log-add': {
+      const text = $('#rec-text').value.trim();
+      if (!text){ toast('写一下这段时间在做什么', 'warn'); return; }
+      const time = $('#rec-time').value || new Date().toTimeString().slice(0, 5);
+      const dur = Math.max(0, parseFloat($('#rec-dur').value) || 0);
+      if (!S.log) S.log = [];
+      S.log.push({id: uid(), date: UI.recDate || todayISO(), time, text, dur, createdAt: Date.now()});
+      closeRecModal();
+      save(); renderDashboard(); renderPlan();
+      toast('已记录 🕐');
+      break;
+    }
+    case 'log-del': {
+      S.log = (S.log || []).filter(x => x.id !== id);
+      save(); renderDashboard(); renderPlan();
+      break;
+    }
     case 'todo-tomorrow': {
       const tm = new Date(); tm.setDate(tm.getDate() + 1);
       const tmIso = toISO(tm);
