@@ -553,9 +553,33 @@ const TIME_CATS = [
   {name: '临时事务', color: '#8a8f98'},
 ];
 function catColor(cat){
-  const c = TIME_CATS.find(x => x.name === cat);
-  return c ? c.color : '#0ea5a4';
+  const c = S.settings.colors && S.settings.colors['cat:' + cat];
+  if (c) return c;
+  const d = TIME_CATS.find(x => x.name === cat);
+  return d ? d.color : '#0ea5a4';
 }
+function typeColor(t){
+  const c = S.settings.colors && S.settings.colors['type:' + t];
+  return c || ({plan:'#007aff', todo:'#ff9500', study:'#9365e0', rem:'#ff3b30'}[t] || '#0ea5a4');
+}
+const COLOR_PRESETS = {
+  '🍎 苹果': {
+    'cat:自律':'#e05a5a', 'cat:运动':'#2e9e5b', 'cat:娱乐':'#9365e0', 'cat:搞钱':'#d9a520', 'cat:工作':'#3b82f6', 'cat:临时事务':'#8a8f98',
+    'type:plan':'#007aff', 'type:todo':'#ff9500', 'type:study':'#9365e0'
+  },
+  '🌿 莫兰迪': {
+    'cat:自律':'#c97b84', 'cat:运动':'#9db38c', 'cat:娱乐':'#a58bc4', 'cat:搞钱':'#c9a86a', 'cat:工作':'#7f9db9', 'cat:临时事务':'#a8a29e',
+    'type:plan':'#7f9db9', 'type:todo':'#c9a86a', 'type:study':'#a58bc4'
+  },
+  '🌈 高饱和': {
+    'cat:自律':'#ff3b30', 'cat:运动':'#34c759', 'cat:娱乐':'#af52de', 'cat:搞钱':'#ffcc00', 'cat:工作':'#007aff', 'cat:临时事务':'#8e8e93',
+    'type:plan':'#007aff', 'type:todo':'#ff9500', 'type:study':'#af52de'
+  },
+  '🌌 暗夜': {
+    'cat:自律':'#ff6b6b', 'cat:运动':'#51cf66', 'cat:娱乐':'#cc5de8', 'cat:搞钱':'#ffd43b', 'cat:工作':'#4dabf7', 'cat:临时事务':'#868e96',
+    'type:plan':'#4dabf7', 'type:todo':'#ffa94d', 'type:study':'#cc5de8'
+  }
+};
 function catSelect(id, sel){
   return `<select id="${id}" style="flex:1">${TIME_CATS.map(c => `<option value="${c.name}" ${c.name === (sel || '临时事务') ? 'selected' : ''}>${c.name}</option>`).join('')}</select>`;
 }
@@ -638,7 +662,7 @@ function renderDashboard(){
       const top = ((h * 60 + m) / 1440 * 100).toFixed(2);
       const hgt = Math.max((e.dur || 30) / 1440 * 100, 3.2).toFixed(2);
       const tL = (e.type === 'log' || e.type === 'study') && e.dur ? esc(e.time) + '-' + esc(endTime(e.time, e.dur)) : esc(e.time);
-      const col = e.type === 'log' ? catColor(e.cat) : ({plan:'#007aff', todo:'#ff9500', study:'#9365e0', rem:'#ff3b30'}[e.type] || '#0ea5a4');
+      const col = e.type === 'log' ? catColor(e.cat) : typeColor(e.type);
       const bColor = `border-left-color:${col};`;
       return `<div class="wvtl-ev t-${e.type} ${e.done ? 'done' : ''}" style="top:${top}%;height:${hgt}%;${bColor}background:${hexToRgba(col, .14)}" title="${tL} ${esc(e.text)}" ${e.type === 'log' ? `data-act="log-edit" data-id="${e.id}"` : ''}><span class="wvtl-et">${tL}</span>${esc(e.text)}${e.type === 'log' ? `<span class="ev-x" data-act="log-del" data-id="${e.id}">✕</span>` : ''}</div>`;
     }).join('');
@@ -732,7 +756,7 @@ function renderDashboard(){
           <div class="wvtl-body"><div class="wvtl-axis">${hourLabels}</div><div class="wvtl-cols">${wkCols}</div></div>
         </div>
         <div class="hint" style="margin-top:10px">👆 点击日历任意位置，记录那个时间在做什么 · ⏰ ${upcomingText}</div>
-    <div style="font-size:12px;color:var(--text2);margin-top:6px">🎨 分类：${TIME_CATS.map(c => `<i class="lg" style="background:${c.color};width:9px;height:9px;border-radius:50%;display:inline-block;vertical-align:-1px"></i> ${c.name}`).join(' ')}</div>
+    <div style="font-size:12px;color:var(--text2);margin-top:6px">🎨 分类：${TIME_CATS.map(c => `<i class="lg" style="background:${catColor(c.name)};width:9px;height:9px;border-radius:50%;display:inline-block;vertical-align:-1px"></i> ${c.name}`).join(' ')}</div>
       </div>
     </div>
     <div class="dash-right">
@@ -896,7 +920,7 @@ function renderTimeline(date){
     const top = (minOf(e.time) / 1440 * 100).toFixed(2);
     const hgt = Math.max((e.dur || 30) / 1440 * 100, 3.2).toFixed(2);
     const tL = (e.type === 'log' || e.type === 'study') && e.dur ? esc(e.time) + '-' + esc(endTime(e.time, e.dur)) : esc(e.time);
-    const col = e.type === 'log' ? catColor(e.cat) : ({plan:'#007aff', todo:'#ff9500', study:'#9365e0', rem:'#ff3b30'}[e.type] || '#0ea5a4');
+    const col = e.type === 'log' ? catColor(e.cat) : typeColor(e.type);
     const bColor = `border-left-color:${col};`;
     return `<div class="vtl-ev t-${e.type} ${e.done ? 'done' : ''}" style="top:${top}%;height:${hgt}%;${bColor}background:${hexToRgba(col, .14)}" title="${tL} ${esc(e.text)}" ${e.type === 'log' ? `data-act="log-edit" data-id="${e.id}"` : ''}>
       <span class="vtl-etime">${tL}</span><span class="vtl-etxt">${esc(e.text)}</span>${e.type === 'log' ? `<span class="ev-x" data-act="log-del" data-id="${e.id}">✕</span>` : ''}</div>`;
@@ -1195,6 +1219,17 @@ function renderStudy(){
   </div>`;
 }
 /* ----- 设置 ----- */
+function colorRow(key, label){
+  const def = key.startsWith('cat:')
+    ? ((TIME_CATS.find(c => 'cat:' + c.name === key) || {}).color || '#0ea5a4')
+    : ({'type:plan':'#007aff','type:todo':'#ff9500','type:study':'#9365e0'}[key] || '#0ea5a4');
+  const cur = (S.settings.colors || {})[key] || def;
+  return `<div class="row" style="margin:4px 0">
+    <span style="font-size:13px;width:96px">${label}</span>
+    <input type="color" value="${cur}" data-act="color-set" data-key="${key}" style="width:44px;height:28px;padding:0;border:1px solid var(--border);border-radius:8px;background:none;cursor:pointer">
+    <span class="badge gray" style="font-size:11px;font-variant-numeric:tabular-nums">${cur}</span>
+  </div>`;
+}
 function renderSettings(){
   const bg = S.settings.bg || {type:'none', value:'', overlay:0.5};
   $('#body-settings').innerHTML = `
@@ -1249,6 +1284,18 @@ function renderSettings(){
       <span id="bg-panel-val" style="font-size:13px;color:var(--text2);width:38px">${Math.round((bg.panelAlpha || 0) * 100)}%</span>
     </div>
     <div style="font-size:12.5px;color:var(--text2)">上传的图片会自动压缩（最长边 1400px），设置会随云同步到其他设备。深色/浅色模式下蒙层颜色会自动适配。透玻璃透明度越高壁纸越清楚，但文字会越难看清——拉高透明度的同时建议把上方「遮罩」也调高一点（如 50%）来衬文字。</div>
+  </div>
+  <div class="card" style="max-width:640px;margin-top:14px">
+    <h3 style="margin-bottom:10px">🎨 时间块配色</h3>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:8px">预设方案（点一下即换）：</div>
+    <div class="cat-btns">
+      ${Object.keys(COLOR_PRESETS).map(k => `<button class="cat-btn" data-act="color-preset" data-v="${k}">${k}</button>`).join('')}
+      <button class="cat-btn" data-act="color-reset">↺ 恢复默认</button>
+    </div>
+    <div style="font-size:13px;color:var(--text2);margin:12px 0 6px">分类色（点色块自选）：</div>
+    ${TIME_CATS.map(c => colorRow('cat:' + c.name, c.name)).join('')}
+    <div style="font-size:13px;color:var(--text2);margin:10px 0 6px">类型色：</div>
+    ${colorRow('type:plan', '📌 安排')}${colorRow('type:todo', '✅ 待办')}${colorRow('type:study', '📖 学习')}
   </div>
   <div class="card" style="max-width:640px;margin-top:14px">
     <h3 style="margin-bottom:10px">💾 数据备份</h3>
@@ -1719,6 +1766,18 @@ document.addEventListener('click', e => {
     case 'pomo-reset': pomoReset(); break;
     case 'pomo-skip': pomoSkip(); break;
 
+    case 'color-preset': {
+      S.settings.colors = Object.assign({}, COLOR_PRESETS[actEl.dataset.v] || {});
+      save(); renderSettings(); renderDashboard(); renderPlan();
+      toast('配色已应用 ' + actEl.dataset.v);
+      break;
+    }
+    case 'color-reset': {
+      S.settings.colors = {};
+      save(); renderSettings(); renderDashboard(); renderPlan();
+      toast('已恢复默认配色');
+      break;
+    }
     case 'sync-enable': syncEnable(); break;
     case 'sync-now': { toast('正在同步…'); syncPull(false); if (Sync.dirty) syncPush(); break; }
     case 'sync-disable': {
@@ -1804,6 +1863,12 @@ document.addEventListener('change', e => {
   const act = el.dataset.act;
   if (!act) return;
   switch (act){
+    case 'color-set': {
+      S.settings.colors = S.settings.colors || {};
+      S.settings.colors[el.dataset.key] = el.value;
+      save(); renderSettings(); renderDashboard(); renderPlan();
+      break;
+    }
     case 'tl-date': { UI.tlDate = el.value; renderPlan(); break; }
     case 'ledger-month': UI.ledgerMonth = el.value; renderLedger(); break;
     case 'subj-target': { const s = S.subjects.find(x => x.id === el.dataset.id); if (s){ s.target = parseFloat(el.value) || 0; save(); renderStudy(); renderDashboard(); } break; }
