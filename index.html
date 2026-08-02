@@ -186,6 +186,11 @@ input[type="month"]{width:160px}
 .dash-main{display:flex;gap:14px;align-items:stretch}
 .dash-left{flex:3;min-width:0}
 .dash-right{flex:1;min-width:0;display:flex;flex-direction:column;gap:14px}
+.dash-right .card{flex:1;display:flex;flex-direction:column;min-height:0}
+.dash-right .card > h3{flex-shrink:0}
+.dash-todo-list{flex:1;overflow-y:auto;min-height:0;margin-right:-6px;padding-right:6px}
+.dash-todo-list::-webkit-scrollbar{width:5px}
+.dash-todo-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 /* ===== 总览周条 ===== */
 .wk-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
 .wk-cell{border:1px solid var(--border);border-radius:10px;padding:8px 4px;text-align:center;cursor:pointer;background:var(--bg);transition:border .15s,background .15s}
@@ -332,11 +337,15 @@ input[type="month"]{width:160px}
 <div class="modal-mask" id="rec-mask" style="display:none">
   <div class="modal-box">
     <div class="row" style="justify-content:space-between;margin-bottom:12px">
-      <div class="seg">
+      <div class="seg" id="rec-seg">
         <button class="sel" data-act="rec-mode" data-m="log">✏️ 记录</button>
         <button data-act="rec-mode" data-m="rem">⏰ 提醒</button>
       </div>
       <h3 style="margin:0" id="rec-title">记录这个时间在做什么</h3>
+    </div>
+    <div id="rec-fields-timer" style="display:none">
+      <div class="hint" style="margin-bottom:10px">⏱️ 从现在开始计时，做完点「结束」自动保存开始-结束时间段</div>
+      <input type="text" id="rec-text-timer" class="grow" style="width:100%;margin-bottom:12px" placeholder="现在要做什么？如：背单词、写作业…" data-enter="#btn-rec-save">
     </div>
     <div id="rec-fields-log">
       <div class="row">
@@ -520,6 +529,7 @@ const UI = {
   weekKey: weekKey(new Date()),
   tlDate: todayISO(),
   recDate: todayISO(),
+  recTimer: {running:false, start:0, date:'', text:'', iv:null},
   ledgerMonth: todayISO().slice(0, 7),
   ledgerType: 'expense',
   ledgerCat: '餐饮',
@@ -620,7 +630,7 @@ function renderDashboard(){
       <div class="card">
         <div class="row" style="justify-content:space-between;margin-bottom:8px">
           <h3 style="margin-bottom:0">📅 本周日历（${curWk.slice(5)} 起 · 第 ${dayOfWeek}/7 天）</h3>
-          <span style="font-size:12px;color:var(--text2);white-space:nowrap"><i class="lg t-plan"></i>安排 <i class="lg t-todo"></i>待办 <i class="lg t-study"></i>学习 <i class="lg t-log"></i>记录 <i class="lg t-rem"></i>提醒<button class="btn small primary" data-act="log-now" style="margin-left:10px">✏️ 记录现在</button><button class="btn small" data-act="rem-now" style="margin-left:6px">⏰ 加提醒</button></span>
+          <span style="font-size:12px;color:var(--text2);white-space:nowrap"><i class="lg t-plan"></i>安排 <i class="lg t-todo"></i>待办 <i class="lg t-study"></i>学习 <i class="lg t-log"></i>记录 <i class="lg t-rem"></i>提醒<button class="btn small primary" data-act="log-now" style="margin-left:10px">✏️ 记录现在</button><button class="btn small" data-act="rec-timer" style="margin-left:6px">▶️ 计时</button><button class="btn small" data-act="rem-now" style="margin-left:6px">⏰ 加提醒</button></span>
         </div>
         <div class="wvtl">
           <div class="wvtl-head"><div class="wvtl-axis-h"></div>${wkHead}</div>
@@ -632,13 +642,13 @@ function renderDashboard(){
     <div class="dash-right">
       <div class="card">
         <h3>✅ 今日待办 ${tDone}/${tds.length}${overdue ? ` <span style="color:var(--danger)">· ${overdue} 逾期</span>` : ''} <a href="#" data-nav-jump="todos" style="font-size:12.5px;color:var(--accent);font-weight:400">全部 →</a></h3>
-        <div class="row" style="margin-bottom:8px">
-          <input type="time" id="dash-todo-time" style="width:88px">
-          <input type="text" id="dash-todo-text" class="grow" placeholder="加一个待办…" data-enter="#btn-dash-todo">
-          <button class="btn primary" id="btn-dash-todo" data-act="dash-todo-add">＋</button>
+        <div class="row" style="margin-bottom:8px;flex-wrap:nowrap">
+          <input type="time" id="dash-todo-time" style="width:76px;flex-shrink:0">
+          <input type="text" id="dash-todo-text" class="grow" placeholder="加待办…" style="min-width:0" data-enter="#btn-dash-todo">
+          <button class="btn primary small" id="btn-dash-todo" data-act="dash-todo-add" style="flex-shrink:0">＋</button>
         </div>
-        ${todoItems || `<div class="empty" style="padding:10px"><span class="big">🎉</span>今天没有待办，加一个吧</div>`}
-        <div class="hint" style="margin-top:6px"><button class="btn small" data-act="todo-tomorrow">⏭ 没做完的移到明天</button></div>
+        ${todoItems ? `<div class="dash-todo-list">${todoItems}</div>` : `<div class="empty" style="padding:10px"><span class="big">🎉</span>今天没有待办，加一个吧</div>`}
+        <div class="hint" style="margin-top:6px;flex-shrink:0"><button class="btn small" data-act="todo-tomorrow">⏭ 没做完的移到明天</button></div>
       </div>
       <div class="card">
         <h3>🗓️ 周计划 <a href="#" data-nav-jump="plan" style="font-size:12.5px;color:var(--accent);font-weight:400">编辑 →</a></h3>
@@ -660,6 +670,10 @@ function renderDashboard(){
   </div>`;
   const wb = document.querySelector('.wvtl-body');
   if (wb) wb.scrollTop = Math.max(0, (now.getHours() - 4) * 23.333);
+  // 桌面端：右栏高度与左栏日历对齐（内容超出则内部滚动）
+  const lc = document.querySelector('.dash-left .card');
+  const rc = document.querySelector('.dash-right');
+  if (lc && rc && window.innerWidth > 920){ rc.style.height = lc.offsetHeight + 'px'; }
 }
 function endTime(time, dur){
   if (!time) return '';
@@ -674,19 +688,49 @@ function openRecModal(date, time, mode){
   $('#rec-time').value = t0;
   $('#rec-time-end').value = endTime(t0, 30);
   $('#rec-text').value = '';
+  $('#rec-text-timer').value = '';
   $('#rem-time').value = time || new Date().toTimeString().slice(0, 5);
   $('#rem-text').value = '';
   $('#rem-repeat').value = 'once';
-  document.querySelectorAll('[data-act="rec-mode"]').forEach(b => b.classList.toggle('sel', b.dataset.m === UI.recMode));
-  $('#rec-fields-log').style.display = UI.recMode === 'log' ? '' : 'none';
-  $('#rec-fields-rem').style.display = UI.recMode === 'rem' ? '' : 'none';
-  $('#rec-title').textContent = UI.recMode === 'log' ? '记录这个时间在做什么' : '给这个时间加个提醒';
-  $('#btn-rec-save').textContent = UI.recMode === 'log' ? '✓ 保存记录' : '⏰ 添加提醒';
-  $('#btn-rec-save').dataset.act = UI.recMode === 'log' ? 'log-add' : 'rem-add';
+  if (mode === 'timer'){
+    $('#rec-seg').style.display = 'none';
+    $('#rec-fields-timer').style.display = '';
+    $('#rec-fields-log').style.display = 'none';
+    $('#rec-fields-rem').style.display = 'none';
+    $('#rec-title').textContent = '⏱️ 计时记录';
+    $('#btn-rec-save').textContent = '▶️ 开始计时';
+    $('#btn-rec-save').dataset.act = 'timer-start';
+  } else {
+    $('#rec-seg').style.display = '';
+    $('#rec-fields-timer').style.display = 'none';
+    document.querySelectorAll('[data-act="rec-mode"]').forEach(b => b.classList.toggle('sel', b.dataset.m === UI.recMode));
+    $('#rec-fields-log').style.display = UI.recMode === 'log' ? '' : 'none';
+    $('#rec-fields-rem').style.display = UI.recMode === 'rem' ? '' : 'none';
+    $('#rec-title').textContent = UI.recMode === 'log' ? '记录这个时间在做什么' : '给这个时间加个提醒';
+    $('#btn-rec-save').textContent = UI.recMode === 'log' ? '✓ 保存记录' : '⏰ 添加提醒';
+    $('#btn-rec-save').dataset.act = UI.recMode === 'log' ? 'log-add' : 'rem-add';
+  }
   $('#rec-mask').style.display = 'flex';
-  setTimeout(() => (UI.recMode === 'log' ? $('#rec-text') : $('#rem-text')).focus(), 60);
+  setTimeout(() => (UI.recMode === 'timer' ? $('#rec-text-timer') : (UI.recMode === 'log' ? $('#rec-text') : $('#rem-text'))).focus(), 60);
 }
 function closeRecModal(){ $('#rec-mask').style.display = 'none'; }
+function renderRecTimer(){
+  const t = UI.recTimer;
+  const btn = document.querySelector('[data-act="rec-timer"]');
+  if (!btn) return;
+  if (t.running){
+    const sec = Math.floor((Date.now() - t.start) / 1000);
+    const mm = String(Math.floor(sec / 60)).padStart(2, '0');
+    const ss = String(sec % 60).padStart(2, '0');
+    btn.className = 'btn small ok';
+    btn.innerHTML = '⏱️ ' + mm + ':' + ss + ' · ■ 结束';
+    btn.title = t.text;
+  } else {
+    btn.className = 'btn small';
+    btn.innerHTML = '▶️ 计时';
+    btn.title = '开始计时：从现在开始，点结束自动保存时间段';
+  }
+}
 /* ----- 待办 ----- */
 function renderTodos(){
   const today = todayISO();
@@ -740,7 +784,7 @@ function renderTodos(){
     ${items || `<div class="empty"><span class="big">🎉</span>${UI.todoFilter === 'done' ? '还没有完成的任务' : '没有任务，先加一个吧'}</div>`}
   </div>`;
 }
-/* ----- 日 / 周计划 ----- */
+/* ----- 周计划 / 时间轴 ----- */
 function renderPlan(){
   const today = todayISO();
   const wk = UI.weekKey;
@@ -820,6 +864,7 @@ function renderTimeline(date){
       <span style="flex:1"></span>
       <span style="font-size:12px;color:var(--text2)">👆 点击空白处记录 / 加提醒 · 红点线 = 现在</span>
       <button class="btn small primary" data-act="log-now">✏️ 记录现在</button>
+      <button class="btn small" data-act="rec-timer">▶️ 计时</button>
       <button class="btn small" data-act="rem-now">⏰ 加提醒</button>
     </div>
     ${noTime ? `<div class="vtl-allday"><span class="vtl-ad-label">全天</span>${noTime}</div>` : ''}
@@ -1549,9 +1594,37 @@ document.addEventListener('click', e => {
       document.querySelectorAll('[data-act="rec-mode"]').forEach(b => b.classList.toggle('sel', b === actEl));
       $('#rec-fields-log').style.display = UI.recMode === 'log' ? '' : 'none';
       $('#rec-fields-rem').style.display = UI.recMode === 'rem' ? '' : 'none';
+      $('#rec-fields-timer').style.display = 'none';
       $('#rec-title').textContent = UI.recMode === 'log' ? '记录这个时间在做什么' : '给这个时间加个提醒';
       $('#btn-rec-save').textContent = UI.recMode === 'log' ? '✓ 保存记录' : '⏰ 添加提醒';
       $('#btn-rec-save').dataset.act = UI.recMode === 'log' ? 'log-add' : 'rem-add';
+      break;
+    }
+    case 'rec-timer': {
+      const t = UI.recTimer;
+      if (t.running){
+        // 结束并保存
+        const dur = Math.max(1, Math.round((Date.now() - t.start) / 60000));
+        const st = new Date(t.start);
+        S.log.push({id: uid(), date: t.date || todayISO(), time: pad(st.getHours()) + ':' + pad(st.getMinutes()), text: t.text, dur, createdAt: Date.now()});
+        clearInterval(t.iv);
+        UI.recTimer = {running:false, start:0, date:'', text:'', iv:null};
+        save(); renderDashboard(); renderPlan(); renderRecTimer();
+        toast('已保存：' + t.text + '（' + dur + ' 分钟）⏱️');
+      } else {
+        openRecModal(todayISO(), undefined, 'timer');
+      }
+      break;
+    }
+    case 'timer-start': {
+      const text = $('#rec-text-timer').value.trim();
+      if (!text){ toast('写一下要做什么', 'warn'); return; }
+      const t = UI.recTimer;
+      t.running = true; t.start = Date.now(); t.date = todayISO(); t.text = text;
+      t.iv = setInterval(renderRecTimer, 1000);
+      closeRecModal();
+      renderDashboard(); renderPlan(); renderRecTimer();
+      toast('计时开始 ⏱️ ' + text);
       break;
     }
     case 'log-now': openRecModal(todayISO()); break;
@@ -1881,6 +1954,7 @@ function handleBgUpload(file){
 function tickClock(){
   const n = new Date();
   $('#clock').textContent = n.toLocaleTimeString('zh-CN', {hour12: false});
+  renderRecTimer();
 }
 function init(){
   load();
