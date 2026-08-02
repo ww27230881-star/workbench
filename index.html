@@ -1338,7 +1338,8 @@ function renderSettings(){
         <span class="badge ok">已启用</span>
         <div style="color:var(--text2);font-size:12.5px;margin-top:6px">
           上次同步：${lastSyncText()} · 每台设备只需填入同一个 Token 即可。<br>
-          以「最后修改的设备」为准；本地数据在覆盖前会自动备份。
+          以「最后修改的设备」为准；本地数据在覆盖前会自动备份。<br>
+          <span style="font-size:11.5px;opacity:.8">云端文件：gist/${esc(Sync.gistId)}（手机填同一个 Token 会自动找到它）</span>
         </div>
       </div>
       <div class="row" style="margin-top:10px">
