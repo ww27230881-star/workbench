@@ -346,6 +346,7 @@ body.custom-text .vtl-ad-label,body.custom-text .legend{color:#677084}
     </nav>
     <div class="top-right">
       <span id="clock">--:--:--</span>
+      <button class="btn small" id="btn-fs" title="全屏 / 退出全屏">⛶</button>
       <button class="btn small" id="btn-dark" title="切换深色模式">🌙</button>
     </div>
   </header>
@@ -2122,6 +2123,16 @@ function init(){
     if (!document.hidden && syncEnabled()){ syncPull(true); if (Sync.dirty) syncPush(); }
   });
   $('#btn-dark').addEventListener('click', () => setDark(!S.settings.dark));
+  $('#btn-fs').addEventListener('click', () => {
+    if (document.fullscreenElement){ document.exitFullscreen().catch(() => {}); }
+    else if (document.documentElement.requestFullscreen){
+      document.documentElement.requestFullscreen().catch(() => toast('当前浏览器不支持全屏', 'warn'));
+    } else { toast('当前浏览器不支持全屏', 'warn'); }
+  });
+  document.addEventListener('fullscreenchange', () => {
+    $('#btn-fs').textContent = document.fullscreenElement ? '⛶' : '⛶';
+    $('#btn-fs').title = document.fullscreenElement ? '退出全屏' : '全屏';
+  });
   $('#bg-file-input').addEventListener('change', e => {
     const f = e.target.files[0];
     if (f) handleBgUpload(f);
