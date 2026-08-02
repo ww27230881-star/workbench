@@ -1116,6 +1116,10 @@ function renderLedger(){
   </div>
   <div class="cards" style="grid-template-columns:1.4fr 1fr">
     <div class="card">
+      <div class="row" style="margin-bottom:8px">
+        <input type="text" id="ledger-msg" class="grow" placeholder="💬 说一句就记账：如「中午吃饭 25」「买了奶茶 15」「兼职收入 200」「昨天打车 20」" data-enter="#btn-ledger-msg" style="background:var(--accent-soft);border-color:var(--accent)">
+        <button class="btn primary" id="btn-ledger-msg" data-act="ledger-msg">🪄 记账</button>
+      </div>
       <div class="row">
         <div class="seg">
           <button class="${UI.ledgerType === 'expense' ? 'sel' : ''}" data-act="ledger-type" data-t="expense">支出</button>
@@ -1551,6 +1555,38 @@ function addWeek(iso){
   save(); renderPlan();
   toast('已加入周计划 ✅');
 }
+function parseLedgerMsg(txt){
+  const s = txt.trim();
+  let date = todayISO();
+  if (/昨天/.test(s)){ const d = new Date(); d.setDate(d.getDate() - 1); date = toISO(d); }
+  else if (/前天/.test(s)){ const d = new Date(); d.setDate(d.getDate() - 2); date = toISO(d); }
+  else {
+    const dowMap = {日:0, 天:0, 一:1, 二:2, 三:3, 四:4, 五:5, 六:6};
+    const m = s.match(/(上?周)([一二三四五六日天])/);
+    if (m && dowMap[m[2]] !== undefined){
+      const now = new Date();
+      const curIdx = (now.getDay() + 6) % 7; // 周六=0 … 周五=6
+      let diff = dowMap[m[2]] - curIdx;
+      if (m[1] === '上周') diff -= 7;
+      const d = new Date(); d.setDate(d.getDate() + diff);
+      date = toISO(d);
+    }
+  }
+  const amtM = s.match(/(\d+(?:\.\d{1,2})?)/);
+  const amount = amtM ? parseFloat(amtM[1]) : 0;
+  const isIncome = /工资|兼职|红包|赚|收入|奖学金|报销/.test(s);
+  let cat = '其他';
+  if (isIncome){
+    const inc = [['生活费', /生活费|爸妈|家里|生活费/], ['兼职', /兼职|打工|家教|跑腿/], ['奖学金', /奖学金|奖/], ['红包', /红包/]];
+    for (const c of inc){ if (c[1].test(s)){ cat = c[0]; break; } }
+  } else {
+    const exp = [['餐饮', /吃|饭|餐|奶茶|咖啡|早|午|晚|外卖|零食|夜宵|火锅|面|粉|汉堡|炸鸡|水果/], ['交通', /车|公交|地铁|打车|出租|加油|高铁|机票|停车|单车/], ['学习', /书|课|学习|培训|文具|考试|报班/], ['医疗', /药|医院|看病|体检|挂号/], ['娱乐', /游戏|电影|娱乐|唱歌|酒吧|旅游|门票|视频会员/], ['购物', /买|购物|淘宝|衣服|鞋|包|京东|拼多多|超市/], ['日用', /日用品|纸巾|洗|牙膏|牙刷|垃圾袋/]];
+    for (const c of exp){ if (c[1].test(s)){ cat = c[0]; break; } }
+  }
+  let note = s.replace(/(\d+(?:\.\d{1,2})?)\s*(块|元|钱)?/g, ' ').replace(/昨天|前天|上?周[一二三四五六日天]/g, ' ').replace(/[，。,.！!？?、]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!note || note === cat) note = '';
+  return {type: isIncome ? 'income' : 'expense', amount, cat, note, date};
+}
 function addLedger(){
   const amt = parseFloat($('#ledger-amt').value);
   if (!amt || amt <= 0){ toast('请输入有效金额', 'warn'); return; }
@@ -1909,6 +1945,18 @@ document.addEventListener('click', e => {
     case 'week-del': { const wk = weekKey(actEl.dataset.date); const days = S.week[wk] && S.week[wk].days; if (days && days[actEl.dataset.date]){ days[actEl.dataset.date].splice(+actEl.dataset.i, 1); save(); renderPlan(); } break; }
     case 'week-add': addWeek(actEl.dataset.date); break;
 
+    case 'ledger-msg': {
+      const txt = $('#ledger-msg').value;
+      if (!txt.trim()){ toast('说一句要记的账，如「中午吃饭 25」', 'warn'); break; }
+      const r = parseLedgerMsg(txt);
+      if (!r.amount || r.amount <= 0){ toast('没认出金额，试试「中午吃饭 25」', 'warn'); break; }
+      S.ledger.push({id: uid(), type: r.type, amount: r.amount, cat: r.cat, note: r.note, date: r.date});
+      $('#ledger-msg').value = '';
+      UI.ledgerDate = r.date;
+      save(); renderLedger(); renderDashboard();
+      toast('已记：' + (r.type === 'expense' ? '支出 -' : '收入 +') + money(r.amount) + ' · ' + r.cat + (r.note ? ' · ' + r.note : '') + (r.date !== todayISO() ? ' · ' + r.date.slice(5) : ''));
+      break;
+    }
     case 'ledger-type': UI.ledgerType = actEl.dataset.t; UI.ledgerCat = UI.ledgerType === 'expense' ? '餐饮' : '生活费'; renderLedger(); break;
     case 'ledger-today': { UI.ledgerDate = todayISO(); renderLedger(); break; }
     case 'ledger-cat': UI.ledgerCat = actEl.dataset.c; document.querySelectorAll('#ledger-cats .cat-btn').forEach(b => b.classList.toggle('sel', b === actEl)); break;
