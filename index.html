@@ -182,6 +182,10 @@ input[type="month"]{width:160px}
 .slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
 .switch input:checked + .slider{background:var(--accent)}
 .switch input:checked + .slider:before{transform:translateX(20px)}
+/* ===== 总览双栏 ===== */
+.dash-main{display:flex;gap:14px;align-items:stretch}
+.dash-left{flex:3;min-width:0}
+.dash-right{flex:1;min-width:0;display:flex;flex-direction:column;gap:14px}
 /* ===== 总览周条 ===== */
 .wk-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
 .wk-cell{border:1px solid var(--border);border-radius:10px;padding:8px 4px;text-align:center;cursor:pointer;background:var(--bg);transition:border .15s,background .15s}
@@ -288,6 +292,7 @@ input[type="month"]{width:160px}
   .day-col{min-height:auto}
   .cards.two-col{grid-template-columns:1fr}
   .wk-strip{grid-template-columns:repeat(4,1fr)}
+  .dash-main{flex-direction:column}
 }
 </style>
 </head>
@@ -297,8 +302,6 @@ input[type="month"]{width:160px}
     <div class="logo">⚡ 效率工作台</div>
     <nav class="nav-items">
       <div class="side-item active" data-nav="dashboard"><span class="ico">🏠</span>总览</div>
-      <div class="side-item" data-nav="todos"><span class="ico">✅</span>待办</div>
-      <div class="side-item" data-nav="plan"><span class="ico">📅</span>计划</div>
       <div class="side-item" data-nav="ledger"><span class="ico">💸</span>记账</div>
       <div class="side-item" data-nav="habits"><span class="ico">🔥</span>习惯</div>
       <div class="side-item" data-nav="study"><span class="ico">🍅</span>学习</div>
@@ -589,30 +592,34 @@ function renderDashboard(){
   const remCount = S.reminders.filter(r => r.enabled).length;
 
   $('#body-dashboard').innerHTML = `
-  <div class="card" style="margin-bottom:14px">
-    <div class="row" style="justify-content:space-between;margin-bottom:8px">
-      <h3 style="margin-bottom:0">📅 本周日历（${curWk.slice(5)} 起 · 第 ${dayOfWeek}/7 天）</h3>
-      <span style="font-size:12px;color:var(--text2);white-space:nowrap"><i class="lg t-plan"></i>安排 <i class="lg t-todo"></i>待办 <i class="lg t-study"></i>学习 <i class="lg t-log"></i>记录<button class="btn small primary" data-act="log-now" style="margin-left:10px">✏️ 记录现在</button></span>
+  <div class="dash-main">
+    <div class="dash-left">
+      <div class="card">
+        <div class="row" style="justify-content:space-between;margin-bottom:8px">
+          <h3 style="margin-bottom:0">📅 本周日历（${curWk.slice(5)} 起 · 第 ${dayOfWeek}/7 天）</h3>
+          <span style="font-size:12px;color:var(--text2);white-space:nowrap"><i class="lg t-plan"></i>安排 <i class="lg t-todo"></i>待办 <i class="lg t-study"></i>学习 <i class="lg t-log"></i>记录<button class="btn small primary" data-act="log-now" style="margin-left:10px">✏️ 记录现在</button></span>
+        </div>
+        <div class="wvtl">
+          <div class="wvtl-head"><div class="wvtl-axis-h"></div>${wkHead}</div>
+          <div class="wvtl-body"><div class="wvtl-axis">${hourLabels}</div><div class="wvtl-cols">${wkCols}</div></div>
+        </div>
+        <div class="hint" style="margin-top:10px">👆 点击日历任意位置，记录那个时间在做什么 · ⏰ ${upcomingText}</div>
+      </div>
     </div>
-    <div class="wvtl">
-      <div class="wvtl-head"><div class="wvtl-axis-h"></div>${wkHead}</div>
-      <div class="wvtl-body"><div class="wvtl-axis">${hourLabels}</div><div class="wvtl-cols">${wkCols}</div></div>
-    </div>
-    <div class="hint" style="margin-top:10px">👆 点击日历任意位置，记录那个时间在做什么 · ⏰ ${upcomingText}</div>
-  </div>
-  <div class="cards two-col">
-    <div class="card">
-      <h3>🗓️ 周计划 <a href="#" data-nav-jump="plan" style="font-size:12.5px;color:var(--accent);font-weight:400">编辑 →</a></h3>
-      ${wkData.goal ? `<div class="hint" style="margin-bottom:8px">🎯 本周目标：${esc(wkData.goal)}</div>` : ''}
-      ${wkSummary}
-      <div class="prow" style="margin-top:10px"><span class="pl">🔥 习惯</span><div class="progress"><div class="fill ${habitPct >= 100 ? 'ok' : ''}" style="width:${habitPct}%"></div></div><span class="pv">${hWk}/${hGoal}</span></div>
-      <div class="prow"><span class="pl">📖 学习</span><div class="progress"><div class="fill ${studyPct >= 100 ? 'ok' : ''}" style="width:${studyPct}%"></div></div><span class="pv">${(wkMinutes/60).toFixed(1)}h/${wkTarget}h</span></div>
-      <div class="hint" style="margin-top:2px">${S.habits.length ? (habitsToday === S.habits.length ? '今天的习惯全部打卡，全勤 👏' : habitsToday + '/' + S.habits.length + ' 个习惯今天已打卡') : '还没有习惯，去建一个吧 →'}</div>
-    </div>
-    <div class="card">
-      <h3>🗓️ 日计划 <a href="#" data-nav-jump="plan" style="font-size:12.5px;color:var(--accent);font-weight:400">编辑 →</a></h3>
-      ${planList || `<div class="empty" style="padding:10px"><span class="big">🗓️</span>今天还没有安排<br><a href="#" data-nav-jump="plan" style="color:var(--accent);font-size:13px">去日计划添加 →</a></div>`}
-      <div class="hint" style="margin-top:8px">✅ 今日待办 ${tDone}/${tds.length}${overdue ? ` · <span style="color:var(--danger)">${overdue} 项逾期</span>` : ''} · <a href="#" data-nav-jump="todos" style="color:var(--accent)">去待办页 →</a></div>
+    <div class="dash-right">
+      <div class="card">
+        <h3>🗓️ 日计划 <a href="#" data-nav-jump="plan" style="font-size:12.5px;color:var(--accent);font-weight:400">编辑 →</a></h3>
+        ${planList || `<div class="empty" style="padding:10px"><span class="big">🗓️</span>今天还没有安排<br><a href="#" data-nav-jump="plan" style="color:var(--accent);font-size:13px">去日计划添加 →</a></div>`}
+        <div class="hint" style="margin-top:8px">✅ 今日待办 ${tDone}/${tds.length}${overdue ? ` · <span style="color:var(--danger)">${overdue} 项逾期</span>` : ''} · <a href="#" data-nav-jump="todos" style="color:var(--accent)">去待办页 →</a></div>
+      </div>
+      <div class="card">
+        <h3>🗓️ 周计划 <a href="#" data-nav-jump="plan" style="font-size:12.5px;color:var(--accent);font-weight:400">编辑 →</a></h3>
+        ${wkData.goal ? `<div class="hint" style="margin-bottom:8px">🎯 本周目标：${esc(wkData.goal)}</div>` : ''}
+        ${wkSummary}
+        <div class="prow" style="margin-top:10px"><span class="pl">🔥 习惯</span><div class="progress"><div class="fill ${habitPct >= 100 ? 'ok' : ''}" style="width:${habitPct}%"></div></div><span class="pv">${hWk}/${hGoal}</span></div>
+        <div class="prow"><span class="pl">📖 学习</span><div class="progress"><div class="fill ${studyPct >= 100 ? 'ok' : ''}" style="width:${studyPct}%"></div></div><span class="pv">${(wkMinutes/60).toFixed(1)}h/${wkTarget}h</span></div>
+        <div class="hint" style="margin-top:2px">${S.habits.length ? (habitsToday === S.habits.length ? '今天的习惯全部打卡，全勤 👏' : habitsToday + '/' + S.habits.length + ' 个习惯今天已打卡') : '还没有习惯，去建一个吧 →'}</div>
+      </div>
     </div>
   </div>
   <div class="card">
