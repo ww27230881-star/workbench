@@ -81,10 +81,12 @@ main{flex:1;padding:22px 28px 80px;min-width:0}
 .btn.ghost{background:transparent}
 /* ===== 表单 ===== */
 input,select,textarea{
-  font:inherit;color:var(--text);background:var(--card);border:1px solid var(--border);
+  font:inherit;color:#1d2433;background:#fff;border:1px solid #e3e7f0;
   border-radius:10px;padding:9px 12px;outline:none;transition:border .15s;max-width:100%;
 }
 input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+::placeholder{color:#8e8e93;opacity:1}
+input[type="color"]{padding:0;background:none;border-color:var(--border)}
 input[type="number"]{width:130px}
 input[type="time"],input[type="date"]{width:150px}
 input[type="month"]{width:160px}
@@ -107,6 +109,11 @@ input[type="month"]{width:160px}
 .badge.danger{background:var(--danger-soft);color:var(--danger)}
 .badge.ok{background:var(--ok-soft);color:var(--ok)}
 .badge.gray{background:var(--bg);color:var(--text2)}
+/* 自定义文字颜色时：浅底小组件固定深字，保证可读 */
+body.custom-text .badge.gray{color:#677084;background:#f2f2f7}
+body.custom-text .empty{background:#fff !important;color:#677084 !important;border-color:#e3e7f0 !important}
+body.custom-text .empty .big{color:#677084}
+body.custom-text .vtl-ad-label,body.custom-text .legend{color:#677084}
 .pri{width:9px;height:9px;border-radius:50%;display:inline-block;flex-shrink:0}
 .pri.h{background:var(--danger)} .pri.m{background:var(--warn)} .pri.l{background:var(--ok)}
 .del{cursor:pointer;color:var(--text2);padding:4px 8px;border-radius:8px;font-size:13px;background:none;border:none}
@@ -296,7 +303,12 @@ input[type="month"]{width:160px}
 .lg.t-rem{background:#e05a5a}
 /* ===== 弹窗 ===== */
 .modal-mask{position:fixed;inset:0;background:rgba(10,14,22,.45);z-index:80;display:flex;align-items:center;justify-content:center}
-.modal-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;width:min(420px,92vw);box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.modal-box{background:#fff;border:1px solid #e3e7f0;border-radius:16px;padding:18px;width:min(420px,92vw);box-shadow:0 12px 40px rgba(0,0,0,.25);color:#1d2433}
+.modal-box h3{color:#1d2433}
+.modal-box .hint{color:#8e8e93}
+.modal-box span[style*="color:var(--text2)"]{color:#8e8e93 !important}
+.modal-box .seg button{background:var(--bg);color:#677084;border:none}
+.modal-box .seg button.sel{background:#fff;color:#1d2433}
 #rec-timer-pill{position:fixed;right:18px;bottom:18px;z-index:90;background:var(--card);border:1px solid var(--border);border-radius:24px;padding:9px 16px;font-size:13.5px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.18);cursor:pointer;color:var(--accent);max-width:60vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #rec-timer-pill:hover{background:var(--accent);color:#fff}
 .modal-box h3{margin-bottom:12px}
@@ -304,7 +316,7 @@ input[type="month"]{width:160px}
 .modal-box .row:last-child{margin-bottom:0}
 /* ===== Toast ===== */
 #toasts{position:fixed;right:18px;bottom:18px;z-index:99;display:flex;flex-direction:column;gap:8px;max-width:340px}
-.toast{padding:11px 16px;border-radius:12px;background:var(--card);border:1px solid var(--border);box-shadow:0 6px 20px rgba(0,0,0,.14);font-size:14px;animation:slidein .2s;transition:opacity .3s}
+.toast{padding:11px 16px;border-radius:12px;background:#fff;border:1px solid #e3e7f0;box-shadow:0 6px 20px rgba(0,0,0,.14);font-size:14px;color:#1d2433;animation:slidein .2s;transition:opacity .3s}
 .toast.ok{border-left:4px solid var(--ok)} .toast.error{border-left:4px solid var(--danger)} .toast.warn{border-left:4px solid var(--warn)}
 @keyframes slidein{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
 /* ===== 响应式 ===== */
@@ -2009,6 +2021,7 @@ function applyBg(){
   doc.style.setProperty('--bgov', String(Math.min(0.85, Math.max(0, +(b.overlay != null ? b.overlay : 0.5)))));
   // 文字颜色：auto 跟随主题；dark/light/hex 自定义
   const t = b.text || 'auto';
+  document.body.classList.toggle('custom-text', t !== 'auto');
   if (t === 'auto'){
     doc.style.removeProperty('--text');
     doc.style.removeProperty('--text2');
