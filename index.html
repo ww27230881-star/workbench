@@ -320,7 +320,7 @@ input[type="month"]{width:160px}
   <main>
     <section class="tab active" id="tab-dashboard"><div class="tab-head"><h2>🏠 总览</h2><p>今天最重要的事，都在这里。</p></div><div id="body-dashboard"></div></section>
     <section class="tab" id="tab-todos"><div class="tab-head"><h2>✅ 待办清单</h2><p>按日期安排任务，逾期会标红提醒。</p></div><div id="body-todos"></div></section>
-    <section class="tab" id="tab-plan"><div class="tab-head"><h2>📅 日 / 周计划</h2><p>日计划 = 具体时间安排；周计划 = 一周的大致目标。</p></div><div id="body-plan"></div></section>
+    <section class="tab" id="tab-plan"><div class="tab-head"><h2>🗓️ 周计划 / ⏱️ 时间轴</h2><p>周计划 = 一周的大致目标；时间轴 = 每天哪个时间段干了什么。</p></div><div id="body-plan"></div></section>
     <section class="tab" id="tab-ledger"><div class="tab-head"><h2>💸 记账</h2><p>随手记一笔，月底知道自己钱花哪了。</p></div><div id="body-ledger"></div></section>
     <section class="tab" id="tab-habits"><div class="tab-head"><h2>🔥 习惯养成</h2><p>每天打卡，别让连续记录断掉。</p></div><div id="body-habits"></div></section>
     <section class="tab" id="tab-study"><div class="tab-head"><h2>🍅 学习计划</h2><p>定每周目标时长，用番茄钟专注计时。</p></div><div id="body-study"></div></section>
@@ -516,11 +516,10 @@ function load(){
 /* ================= UI 状态 ================= */
 const UI = {
   tab: 'dashboard',
-  planSub: 'daily',
+  planSub: 'weekly',
   weekKey: weekKey(new Date()),
   tlDate: todayISO(),
   recDate: todayISO(),
-  dailyDate: todayISO(),
   ledgerMonth: todayISO().slice(0, 7),
   ledgerType: 'expense',
   ledgerCat: '餐饮',
@@ -600,15 +599,19 @@ function renderDashboard(){
     ? wkItemList.map(x => `<div class="tl-item"><span class="tl-time">${x.iso.slice(5)}</span><span class="t">${esc(x.txt)}</span></div>`).join('')
     : `<div class="empty" style="padding:10px"><span class="big">🗓️</span>本周还没写计划<br><a href="#" data-nav-jump="plan" style="color:var(--accent);font-size:13px">去周计划写 →</a></div>`;
 
-  // 日计划摘要（今天）——日计划就是待办
-  const todaysTodos = [...S.todos].filter(t => t.date === today).sort((a, b) => {
+  // 今日待办列表
+  const todoItems = [...tds].sort((a, b) => {
     if (a.done !== b.done) return a.done ? 1 : -1;
     const at = a.time || '99:99', bt = b.time || '99:99';
     if (at !== bt) return at < bt ? -1 : 1;
     return b.createdAt - a.createdAt;
-  });
-  const planList = todaysTodos.slice(0, 7)
-    .map(t => `<div class="tl-item"><span class="tl-time">${esc(t.time || '')}</span><span class="t" style="${t.done ? 'text-decoration:line-through;color:var(--text2)' : ''}">${esc(t.text)}</span></div>`).join('');
+  }).slice(0, 12).map(t => `
+    <div class="item ${t.done ? 'done' : ''}" style="padding:7px 2px">
+      <div class="chk ${t.done ? 'on' : ''}" data-act="todo-toggle" data-id="${t.id}">${t.done ? '✓' : ''}</div>
+      <div class="grow"><div class="t" style="font-size:14px">${esc(t.text)}</div></div>
+      ${t.time ? `<span class="badge gray">🕐 ${esc(t.time)}</span>` : ''}
+      <button class="del" data-act="todo-del" data-id="${t.id}">✕</button>
+    </div>`).join('');
   const remCount = S.reminders.filter(r => r.enabled).length;
 
   $('#body-dashboard').innerHTML = `
@@ -628,9 +631,14 @@ function renderDashboard(){
     </div>
     <div class="dash-right">
       <div class="card">
-        <h3>🗓️ 日计划 <a href="#" data-nav-jump="plan" style="font-size:12.5px;color:var(--accent);font-weight:400">编辑 →</a></h3>
-        ${planList || `<div class="empty" style="padding:10px"><span class="big">🗓️</span>今天还没有安排<br><a href="#" data-nav-jump="plan" style="color:var(--accent);font-size:13px">去日计划添加 →</a></div>`}
-        <div class="hint" style="margin-top:8px">✅ 今日待办 ${tDone}/${tds.length}${overdue ? ` · <span style="color:var(--danger)">${overdue} 项逾期</span>` : ''} · <a href="#" data-nav-jump="todos" style="color:var(--accent)">去待办页 →</a></div>
+        <h3>✅ 今日待办 ${tDone}/${tds.length}${overdue ? ` <span style="color:var(--danger)">· ${overdue} 逾期</span>` : ''} <a href="#" data-nav-jump="todos" style="font-size:12.5px;color:var(--accent);font-weight:400">全部 →</a></h3>
+        <div class="row" style="margin-bottom:8px">
+          <input type="time" id="dash-todo-time" style="width:88px">
+          <input type="text" id="dash-todo-text" class="grow" placeholder="加一个待办…" data-enter="#btn-dash-todo">
+          <button class="btn primary" id="btn-dash-todo" data-act="dash-todo-add">＋</button>
+        </div>
+        ${todoItems || `<div class="empty" style="padding:10px"><span class="big">🎉</span>今天没有待办，加一个吧</div>`}
+        <div class="hint" style="margin-top:6px"><button class="btn small" data-act="todo-tomorrow">⏭ 没做完的移到明天</button></div>
       </div>
       <div class="card">
         <h3>🗓️ 周计划 <a href="#" data-nav-jump="plan" style="font-size:12.5px;color:var(--accent);font-weight:400">编辑 →</a></h3>
@@ -735,19 +743,16 @@ function renderTodos(){
 /* ----- 日 / 周计划 ----- */
 function renderPlan(){
   const today = todayISO();
-  const dailyHtml = renderDailyPlan(today);
   const wk = UI.weekKey;
   const weeklyHtml = renderWeeklyPlan(wk, today);
   const timelineHtml = renderTimeline(UI.tlDate || today);
   $('#body-plan').innerHTML = `
   <div class="row" style="justify-content:space-between">
     <div class="seg">
-      <button class="${UI.planSub === 'daily' ? 'sel' : ''}" data-act="plan-sub" data-s="daily">日计划</button>
       <button class="${UI.planSub === 'weekly' ? 'sel' : ''}" data-act="plan-sub" data-s="weekly">周计划</button>
       <button class="${UI.planSub === 'timeline' ? 'sel' : ''}" data-act="plan-sub" data-s="timeline">⏱️ 时间轴</button>
     </div>
   </div>
-  <div id="plan-daily" style="${UI.planSub === 'daily' ? '' : 'display:none'}">${dailyHtml}</div>
   <div id="plan-weekly" style="${UI.planSub === 'weekly' ? '' : 'display:none'}">${weeklyHtml}</div>
   <div id="plan-timeline" style="${UI.planSub === 'timeline' ? '' : 'display:none'}">${timelineHtml}</div>`;
   setTimeout(() => {
@@ -826,43 +831,7 @@ function renderTimeline(date){
         <div class="vtl-evs">${evHtml}</div>
         ${nowLine}
       </div>
-    </div>` : `<div class="empty" style="padding:36px"><span class="big">⏱️</span>这一天还没有带时间的记录<br><span style="font-size:13px;color:var(--text2)">点击上方空白时间轴任意位置，记录这个时间在做什么；或在「日计划」添加带时间的安排</span></div>`}
-  </div>`;
-}
-function renderDailyPlan(date){
-  const todos = [...S.todos].filter(t => t.date === date).sort((a, b) => {
-    if (a.done !== b.done) return a.done ? 1 : -1;
-    const at = a.time || '99:99', bt = b.time || '99:99';
-    if (at !== bt) return at < bt ? -1 : 1;
-    return b.createdAt - a.createdAt;
-  });
-  const tDone = todos.filter(t => t.done).length;
-  const todoHtml = todos.length ? todos.map(t => `
-    <div class="item ${t.done ? 'done' : ''}" style="padding:7px 2px">
-      <div class="chk ${t.done ? 'on' : ''}" data-act="todo-toggle" data-id="${t.id}">${t.done ? '✓' : ''}</div>
-      <div class="grow"><div class="t" style="font-size:14px">${esc(t.text)}</div></div>
-      ${t.time ? `<span class="badge gray">🕐 ${esc(t.time)}</span>` : ''}
-      <span class="badge ${t.pri === '高' ? 'danger' : t.pri === '中' ? 'warn' : 'ok'}">${esc(t.pri)}</span>
-      <button class="del" data-act="todo-del" data-id="${t.id}">✕</button>
-    </div>`).join('')
-    : `<div class="empty"><span class="big">✅</span>这一天还没有待办，加一个吧</div>`;
-  return `
-  <div class="card" style="margin-bottom:14px">
-    <div class="row">
-      <input type="date" id="daily-date" value="${date}" data-act="daily-date">
-      <span style="color:var(--text2);font-size:13.5px">${fmtDateCN(date)}</span>
-      <button class="btn small" data-act="todo-tomorrow" title="把今天及之前没做完的顺延到明天" style="margin-left:auto">⏭ 没完成的移到明天</button>
-    </div>
-    <div class="row">
-      <input type="time" id="daily-time" value="">
-      <input type="text" id="daily-text" class="grow" placeholder="今天的待办 / 安排，如：8:00 背单词" data-enter="#btn-daily-add">
-      <select id="daily-pri" style="width:88px">
-        <option value="中" selected>🟡 中</option><option value="高">🔴 高</option><option value="低">🟢 低</option>
-      </select>
-      <button class="btn primary" id="btn-daily-add" data-act="daily-add">＋ 添加</button>
-    </div>
-    <h3 style="font-size:13.5px;color:var(--text2);margin:6px 0 2px">✅ 今日待办 ${tDone}/${todos.length}</h3>
-    ${todoHtml}
+    </div>` : `<div class="empty" style="padding:36px"><span class="big">⏱️</span>这一天还没有带时间的记录<br><span style="font-size:13px;color:var(--text2)">点击上方空白时间轴任意位置，记录这个时间在做什么；或在总览的「今日待办」添加带时间的待办</span></div>`}
   </div>`;
 }
 function renderWeeklyPlan(wk, today){
@@ -1366,20 +1335,6 @@ function addTodo(){
   save(); renderTodos(); renderDashboard();
   toast('已添加 ✅');
 }
-function addDaily(){
-  const date = $('#daily-date').value || todayISO();
-  const text = $('#daily-text').value.trim();
-  if (!text){ toast('写一下今天的待办', 'warn'); return; }
-  S.todos.push({
-    id: uid(), text,
-    cat: '学习', pri: $('#daily-pri').value || '中',
-    date, time: $('#daily-time').value || '',
-    done: false, createdAt: Date.now(),
-  });
-  $('#daily-text').value = ''; $('#daily-time').value = '';
-  save(); renderPlan(); renderDashboard(); renderTodos();
-  toast('已加入日计划 ✅');
-}
 function addWeek(iso){
   const text = $('#wk-text-' + iso).value.trim();
   if (!text){ toast('请输入安排内容', 'warn'); return; }
@@ -1570,6 +1525,15 @@ document.addEventListener('click', e => {
 
   switch (act){
     case 'todo-toggle': { const t = S.todos.find(x => x.id === id); if (t){ t.done = !t.done; save(); renderTodos(); renderDashboard(); } break; }
+    case 'dash-todo-add': {
+      const text = $('#dash-todo-text').value.trim();
+      if (!text){ toast('请输入待办内容', 'warn'); return; }
+      S.todos.push({id: uid(), text, cat: '学习', pri: '中', date: todayISO(), time: $('#dash-todo-time').value || '', done: false, createdAt: Date.now()});
+      $('#dash-todo-text').value = ''; $('#dash-todo-time').value = '';
+      save(); renderDashboard(); renderTodos(); renderPlan();
+      toast('已添加 ✅');
+      break;
+    }
     case 'todo-del': { S.todos = S.todos.filter(x => x.id !== id); save(); renderTodos(); renderDashboard(); renderPlan(); break; }
     case 'todo-filter': UI.todoFilter = actEl.dataset.f; renderTodos(); break;
     case 'tl-record': {
@@ -1650,7 +1614,6 @@ document.addEventListener('click', e => {
     }
     case 'week-nav': UI.weekKey = actEl.dataset.week; renderPlan(); break;
     case 'todo-add': addTodo(); break;
-    case 'daily-add': addDaily(); break;
     case 'ledger-add': addLedger(); break;
     case 'habit-add': addHabit(); break;
     case 'week-del': { const wk = weekKey(actEl.dataset.date); const days = S.week[wk] && S.week[wk].days; if (days && days[actEl.dataset.date]){ days[actEl.dataset.date].splice(+actEl.dataset.i, 1); save(); renderPlan(); } break; }
@@ -1775,7 +1738,6 @@ document.addEventListener('change', e => {
   const act = el.dataset.act;
   if (!act) return;
   switch (act){
-    case 'daily-date': renderDaily(); break;
     case 'tl-date': { UI.tlDate = el.value; renderPlan(); break; }
     case 'ledger-month': UI.ledgerMonth = el.value; renderLedger(); break;
     case 'habit-goal': { const h = S.habits.find(x => x.id === el.dataset.id); if (h){ h.goal = +el.value; save(); renderHabits(); } break; }
@@ -1836,13 +1798,6 @@ document.addEventListener('keydown', e => {
 });
 
 /* ================= 杂项 ================= */
-function renderDaily(){
-  // 重绘日计划区（用于切换日期）
-  const date = $('#daily-date').value || todayISO();
-  UI.dailyDate = date;
-  const wrap = $('#plan-daily');
-  if (wrap) wrap.innerHTML = renderDailyPlan(date);
-}
 function setDark(on){
   document.documentElement.setAttribute('data-theme', on ? 'dark' : '');
   S.settings.dark = on;
