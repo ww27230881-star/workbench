@@ -328,7 +328,7 @@ input[type="month"]{width:160px}
   </header>
   <main>
     <section class="tab active" id="tab-dashboard"><div class="tab-head"><h2>🏠 总览</h2><p>今天最重要的事，都在这里。</p></div><div id="body-dashboard"></div></section>
-    <section class="tab" id="tab-todos"><div class="tab-head"><h2>✅ 待办清单</h2><p>按日期安排任务，逾期会标红提醒。</p></div><div id="body-todos"></div></section>
+    <section class="tab" id="tab-todos"><div class="tab-head"><h2>✅ Reminders</h2><p>按日期安排任务，逾期会标红提醒。</p></div><div id="body-todos"></div></section>
     <section class="tab" id="tab-plan"><div class="tab-head"><h2>🗓️ 周计划 / ⏱️ 时间轴</h2><p>周计划 = 一周的大致目标；时间轴 = 每天哪个时间段干了什么。</p></div><div id="body-plan"></div></section>
     <section class="tab" id="tab-ledger"><div class="tab-head"><h2>💸 记账</h2><p>随手记一笔，月底知道自己钱花哪了。</p></div><div id="body-ledger"></div></section>
     <section class="tab" id="tab-habits"><div class="tab-head"><h2>🔥 习惯养成</h2><p>每天打卡，别让连续记录断掉。</p></div><div id="body-habits"></div></section>
@@ -670,13 +670,13 @@ function renderDashboard(){
     </div>
     <div class="dash-right">
       <div class="card">
-        <h3>✅ 今日待办 ${tDone}/${tds.length}${overdue ? ` <span style="color:var(--danger)">· ${overdue} 逾期</span>` : ''} <a href="#" data-nav-jump="todos" style="font-size:12.5px;color:var(--accent);font-weight:400">全部 →</a></h3>
+        <h3>✅ Reminder ${tDone}/${tds.length}${overdue ? ` <span style="color:var(--danger)">· ${overdue} 逾期</span>` : ''} <a href="#" data-nav-jump="todos" style="font-size:12.5px;color:var(--accent);font-weight:400">全部 →</a></h3>
         <div class="row" style="margin-bottom:8px;flex-wrap:nowrap">
           <input type="time" id="dash-todo-time" style="width:76px;flex-shrink:0">
-          <input type="text" id="dash-todo-text" class="grow" placeholder="加待办…" style="min-width:0" data-enter="#btn-dash-todo">
+          <input type="text" id="dash-todo-text" class="grow" placeholder="加 Reminder…" style="min-width:0" data-enter="#btn-dash-todo">
           <button class="btn primary small" id="btn-dash-todo" data-act="dash-todo-add" style="flex-shrink:0">＋</button>
         </div>
-        ${todoItems ? `<div class="dash-todo-list">${todoItems}</div>` : `<div class="empty" style="padding:10px"><span class="big">🎉</span>今天没有待办，加一个吧</div>`}
+        ${todoItems ? `<div class="dash-todo-list">${todoItems}</div>` : `<div class="empty" style="padding:10px"><span class="big">🎉</span>今天没有 Reminder，加一个吧</div>`}
       </div>
       <div class="card">
         <h3>🗓️ 周计划 <a href="#" data-nav-jump="plan" style="font-size:12.5px;color:var(--accent);font-weight:400">编辑 →</a></h3>
@@ -689,7 +689,7 @@ function renderDashboard(){
   <div class="card">
     <h3>⚡ 快捷操作</h3>
     <div class="row" style="margin-bottom:0">
-      <button class="btn primary" data-nav-jump="todos">✅ 添加待办</button>
+      <button class="btn primary" data-nav-jump="todos">✅ 添加 Reminder</button>
       <button class="btn" data-nav-jump="ledger">💸 记一笔</button>
       <button class="btn" data-nav-jump="habits">🔥 习惯打卡</button>
       <button class="btn" data-nav-jump="study">🍅 开始番茄钟</button>
@@ -902,7 +902,7 @@ function renderTimeline(date){
         <div class="vtl-evs">${evHtml}</div>
         ${nowLine}
       </div>
-    </div>` : `<div class="empty" style="padding:36px"><span class="big">⏱️</span>这一天还没有带时间的记录<br><span style="font-size:13px;color:var(--text2)">点击上方空白时间轴任意位置，记录这个时间在做什么；或在总览的「今日待办」添加带时间的待办</span></div>`}
+    </div>` : `<div class="empty" style="padding:36px"><span class="big">⏱️</span>这一天还没有带时间的记录<br><span style="font-size:13px;color:var(--text2)">点击上方空白时间轴任意位置，记录这个时间在做什么；或在总览的「Reminder」添加带时间的提醒事项</span></div>`}
   </div>
   ${catHtml}`;
 }
