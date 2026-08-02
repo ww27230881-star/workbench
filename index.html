@@ -288,11 +288,6 @@ input[type="month"]{width:160px}
 .modal-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;width:min(420px,92vw);box-shadow:0 12px 40px rgba(0,0,0,.25)}
 #rec-timer-pill{position:fixed;right:18px;bottom:18px;z-index:90;background:var(--card);border:1px solid var(--border);border-radius:24px;padding:9px 16px;font-size:13.5px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.18);cursor:pointer;color:var(--accent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);max-width:60vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #rec-timer-pill:hover{background:var(--accent);color:#fff}
-/* ===== 小 AI ===== */
-.ai-chat{max-height:280px;overflow-y:auto;margin-bottom:10px;display:flex;flex-direction:column;gap:8px;padding:2px}
-.ai-msg{font-size:13.5px;line-height:1.65;border-radius:12px;padding:8px 12px;white-space:pre-wrap;word-break:break-word}
-.ai-msg.ai{background:var(--accent-soft)}
-.ai-msg.user{background:var(--bg);color:var(--text2);align-self:flex-end;max-width:88%}
 .modal-box h3{margin-bottom:12px}
 .modal-box .row{margin-bottom:12px}
 .modal-box .row:last-child{margin-bottom:0}
@@ -571,7 +566,6 @@ const UI = {
   ledgerCat: '餐饮',
   todoFilter: 'open',
   remType: 'interval',
-  aiLog: [],
   editLogId: null,
   pomo: {running:false, phase:'focus', total:25*60, left:25*60, cycles:0, subj:'', timer:null, startTime:0},
 };
@@ -716,13 +710,8 @@ function renderDashboard(){
     </div>
   </div>
   <div class="card">
-    <h3>🤖 小 AI <span style="font-size:12px;color:var(--text2);font-weight:400">问它「复盘今天」「这周学了多少」…</span></h3>
-    <div id="ai-chat"></div>
-    <div class="row">
-      <input type="text" id="ai-input" placeholder="比如：复盘今天我都干了什么" data-enter="#btn-ai">
-      <button class="btn primary" id="btn-ai" data-act="ai-ask">问它</button>
-    </div>
-    <div class="row" style="margin-bottom:0;flex-wrap:wrap;margin-top:10px">
+    <h3>⚡ 快捷操作</h3>
+    <div class="row" style="margin-bottom:0;flex-wrap:wrap">
       <button class="btn small" data-nav-jump="todos">✅ Reminder</button>
       <button class="btn small" data-nav-jump="ledger">💸 记一笔</button>
       <button class="btn small" data-nav-jump="habits">🔥 打卡</button>
@@ -735,148 +724,12 @@ function renderDashboard(){
   const lc = document.querySelector('.dash-left .card');
   const rc = document.querySelector('.dash-right');
   if (lc && rc && window.innerWidth > 920){ rc.style.height = lc.offsetHeight + 'px'; }
-  aiRenderChat();
 }
 function endTime(time, dur){
   if (!time) return '';
   const [h, m] = time.split(':').map(Number);
   const t = h * 60 + m + (dur || 0);
   return pad(Math.floor(t / 60) % 24) + ':' + pad(t % 60);
-}
-/* ================= 小 AI（本地数据总结） ================= */
-function aiRenderChat(){
-  const chat = $('#ai-chat');
-  if (!chat) return;
-  if (!UI.aiLog.length){
-    UI.aiLog.push({role: 'ai', text: '👋 我是你的小 AI。问我：\n📋 「复盘今天我都干了什么」\n🗓️ 「这周怎么样」\n🍅 「学习情况」· 🔥 「习惯」\n💸 「花了多少钱」· ✅ 「Reminder」'});
-  }
-  chat.innerHTML = '';
-  UI.aiLog.forEach(m => {
-    const div = document.createElement('div');
-    div.className = 'ai-msg ' + m.role;
-    if (m.role === 'user') div.textContent = m.text;
-    else div.innerHTML = m.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
-    chat.appendChild(div);
-  });
-  chat.scrollTop = chat.scrollHeight;
-}
-function aiAppend(role, text){
-  UI.aiLog.push({role, text});
-  aiRenderChat();
-}
-function catSumOf(day){
-  const m = {};
-  (S.log || []).filter(l => l.date === day && l.dur > 0).forEach(l => { const c = l.cat || '临时事务'; m[c] = (m[c] || 0) + l.dur; });
-  return m;
-}
-function fmtDur(min){
-  const h = Math.floor(min / 60), mm = Math.round(min % 60);
-  return (h > 0 ? h + 'h' : '') + (mm > 0 ? (h > 0 ? mm + 'm' : mm + ' 分钟') : (h > 0 ? '' : '0'));
-}
-function todaySummary(){
-  const today = todayISO();
-  const out = ['📋 **今天（' + today.slice(5) + '）复盘**'];
-  const cs = catSumOf(today);
-  const total = Object.values(cs).reduce((a, b) => a + b, 0);
-  if (total > 0){
-    const top = Object.entries(cs).sort((a, b) => b[1] - a[1])[0];
-    out.push('⏱️ 时间记录共 ' + fmtDur(total) + '：' + Object.entries(cs).sort((a, b) => b[1] - a[1]).map(([c, m]) => c + ' ' + fmtDur(m)).join('、'));
-    out.push('🏆 花时间最多：「' + top[0] + '」' + fmtDur(top[1]));
-  } else {
-    out.push('⏱️ 今天还没有时间记录——点日历记一笔，或开始计时');
-  }
-  const study = S.studyLog.filter(l => l.date === today);
-  const smin = study.reduce((a, b) => a + b.minutes, 0);
-  if (smin > 0) out.push('🍅 学习 ' + smin + ' 分钟（' + study.map(l => l.subj).join('、') + '）');
-  const tds = S.todos.filter(t => t.date === today);
-  const tDone = tds.filter(t => t.done).length;
-  if (tds.length) out.push('✅ Reminder：完成 ' + tDone + '/' + tds.length + (tDone === tds.length ? '，全部完成 🎉' : '，还有 ' + (tds.length - tDone) + ' 条没做'));
-  const hDone = S.habits.filter(h => h.history[today]).length;
-  if (S.habits.length) out.push('🔥 习惯打卡 ' + hDone + '/' + S.habits.length);
-  const tExp = S.ledger.filter(l => l.type === 'expense' && l.date === today).reduce((a, b) => a + b.amount, 0);
-  if (tExp > 0) out.push('💸 今天支出 ' + money(tExp));
-  return out.join('\n');
-}
-function weekSummary(){
-  const wk = weekKey(new Date());
-  const out = ['🗓️ **本周（' + wk.slice(5) + ' 起）总结**'];
-  const days = weekDays(wk);
-  const cs = {};
-  days.forEach(d => { const m = catSumOf(d); Object.keys(m).forEach(c => { cs[c] = (cs[c] || 0) + m[c]; }); });
-  const total = Object.values(cs).reduce((a, b) => a + b, 0);
-  if (total > 0) out.push('⏱️ 有记录 ' + fmtDur(total) + '：' + Object.entries(cs).sort((a, b) => b[1] - a[1]).map(([c, m]) => c + ' ' + fmtDur(m)).join('、'));
-  else out.push('⏱️ 本周还没有时间记录');
-  const wkMin = S.studyLog.filter(l => weekKey(l.date) === wk).reduce((a, b) => a + b.minutes, 0);
-  if (wkMin > 0) out.push('🍅 学习共 ' + wkMin + ' 分钟');
-  const doneDays = S.habits.length ? days.filter(d => S.habits.every(h => h.history[d])).length : 0;
-  if (S.habits.length) out.push('🔥 习惯：全勤 ' + doneDays + '/' + days.length + ' 天');
-  const wkExp = S.ledger.filter(l => l.type === 'expense' && weekKey(l.date) === wk).reduce((a, b) => a + b.amount, 0);
-  if (wkExp > 0) out.push('💸 本周支出 ' + money(wkExp));
-  return out.join('\n');
-}
-function studySummary(){
-  const today = todayISO();
-  const out = ['🍅 **学习情况**'];
-  const wk = weekKey(new Date());
-  const wkMin = S.studyLog.filter(l => weekKey(l.date) === wk).reduce((a, b) => a + b.minutes, 0);
-  const todayMin = S.studyLog.filter(l => l.date === today).reduce((a, b) => a + b.minutes, 0);
-  out.push('今天 ' + (todayMin > 0 ? todayMin + ' 分钟' : '还没学习') + '；本周共 ' + wkMin + ' 分钟');
-  const bySubj = {};
-  S.studyLog.filter(l => weekKey(l.date) === wk).forEach(l => { bySubj[l.subj] = (bySubj[l.subj] || 0) + l.minutes; });
-  if (Object.keys(bySubj).length) out.push('分科目：' + Object.entries(bySubj).sort((a, b) => b[1] - a[1]).map(([s, m]) => s + ' ' + m + 'm').join('、'));
-  const targets = S.subjects.map(s => s.name + ' 目标' + (s.target || 0) + 'h');
-  if (targets.length) out.push('🎯 目标：' + targets.join('、'));
-  return out.join('\n');
-}
-function habitSummary(){
-  const today = todayISO();
-  const hDone = S.habits.filter(h => h.history[today]).length;
-  const out = ['🔥 **习惯打卡**'];
-  if (!S.habits.length) return out.concat('还没有习惯，去建一个吧').join('\n');
-  out.push('今天 ' + hDone + '/' + S.habits.length + '：' + S.habits.map(h => (h.history[today] ? '✅' : '⬜') + h.name).join(' '));
-  const best = S.habits.map(h => ({name: h.name, streak: h.streak || 0})).sort((a, b) => b.streak - a.streak)[0];
-  if (best && best.streak > 0) out.push('最长连续：' + best.name + ' ' + best.streak + ' 天');
-  return out.join('\n');
-}
-function ledgerSummary(){
-  const mk = todayISO().slice(0, 7);
-  const exp = S.ledger.filter(l => l.type === 'expense' && monthKey(l.date) === mk).reduce((a, b) => a + b.amount, 0);
-  const inc = S.ledger.filter(l => l.type === 'income' && monthKey(l.date) === mk).reduce((a, b) => a + b.amount, 0);
-  const out = ['💸 **本月记账（' + mk + '）**', '支出 ' + money(exp) + ' · 收入 ' + money(inc) + ' · 结余 ' + money(inc - exp)];
-  const cats = {};
-  S.ledger.filter(l => l.type === 'expense' && monthKey(l.date) === mk).forEach(l => { cats[l.cat] = (cats[l.cat] || 0) + l.amount; });
-  const top = Object.entries(cats).sort((a, b) => b[1] - a[1]).slice(0, 3);
-  if (top.length) out.push('花钱最多：' + top.map(([c, v]) => c + ' ' + money(v)).join('、'));
-  return out.join('\n');
-}
-function todoSummary(){
-  const today = todayISO();
-  const tds = S.todos.filter(t => !t.done).sort((a, b) => (a.date < b.date ? -1 : 1));
-  const out = ['✅ **Reminder 待办**'];
-  if (!tds.length) return out.concat('没有未完成的，清清爽爽 🎉').join('\n');
-  const overdue = tds.filter(t => t.date < today).length;
-  const todayN = tds.filter(t => t.date === today).length;
-  out.push('未完成 ' + tds.length + ' 条' + (overdue ? '（其中 ' + overdue + ' 条已逾期）' : '') + (todayN ? '，今天 ' + todayN + ' 条' : ''));
-  tds.slice(0, 5).forEach(t => out.push((t.date < today ? '⚠️' : t.date === today ? '📌' : '🕐') + ' ' + (t.date === today ? '' : t.date.slice(5) + ' ') + esc(t.text)));
-  if (tds.length > 5) out.push('…还有 ' + (tds.length - 5) + ' 条');
-  return out.join('\n');
-}
-function aiAnswer(q){
-  const s = (q || '').toLowerCase();
-  if (/周/.test(s) && !/今天|今日/.test(s)) return weekSummary();
-  if (/学习|番茄|学了多少|看了多久/.test(s)) return studySummary();
-  if (/习惯|打卡/.test(s)) return habitSummary();
-  if (/记账|花了|支出|钱|收入/.test(s)) return ledgerSummary();
-  if (/待办|reminder|提醒事项|任务/.test(s)) return todoSummary();
-  if (/帮助|会什么|能干什么/.test(s)) return '我可以基于你的数据回答：\n📋 复盘今天 / 这周怎么样\n🍅 学习 / 🔥 习惯 / 💸 记账 / ✅ Reminder';
-  return todaySummary();
-}
-function aiAsk(){
-  const q = $('#ai-input').value.trim();
-  if (!q){ toast('问我点什么吧', 'warn'); return; }
-  aiAppend('user', q);
-  $('#ai-input').value = '';
-  setTimeout(() => aiAppend('ai', aiAnswer(q)), 150);
 }
 function openRecModal(date, time){
   UI.recDate = date || todayISO();
@@ -1746,7 +1599,6 @@ document.addEventListener('click', e => {
       toast('计时开始 ⏱️ ' + text);
       break;
     }
-    case 'ai-ask': aiAsk(); break;
     case 'log-now': openRecModal(todayISO()); break;
     case 'log-edit': {
       const l = (S.log || []).find(x => x.id === id);
