@@ -8,19 +8,19 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#f2f4f9; --card:#ffffff; --text:#1d2433; --text2:#677084;
-  --border:#e3e7f0; --accent:#4f6ef7; --accent-soft:#edf0fe;
-  --ok:#1f9d63; --ok-soft:#e5f6ee; --warn:#dd9a2b; --warn-soft:#fdf3e0;
-  --danger:#dd4b4b; --danger-soft:#fdeaea;
-  --radius:14px; --shadow:0 1px 3px rgba(16,24,40,.06);
+  --bg:#f2f2f7; --card:#ffffff; --text:#1c1c1e; --text2:#8e8e93;
+  --border:#e5e5ea; --accent:#007aff; --accent-soft:#e9f2ff;
+  --ok:#34c759; --ok-soft:#e5f8ea; --warn:#ff9500; --warn-soft:#fff4e5;
+  --danger:#ff3b30; --danger-soft:#ffeae9;
+  --radius:14px; --shadow:0 1px 3px rgba(0,0,0,.07);
   --panel-bg:var(--card);
 }
 html[data-theme="dark"]{
-  --bg:#11141d; --card:#1a1f2c; --text:#e7eaf2; --text2:#98a1b4;
-  --border:#2a3145; --accent:#7188ff; --accent-soft:#232b49;
-  --ok:#2eae76; --ok-soft:#14382a; --warn:#e0a848; --warn-soft:#3a2f17;
-  --danger:#e26060; --danger-soft:#3d1f22;
-  --shadow:0 1px 3px rgba(0,0,0,.35);
+  --bg:#000000; --card:#1c1c1e; --text:#f2f2f7; --text2:#98989f;
+  --border:#38383a; --accent:#0a84ff; --accent-soft:#132a44;
+  --ok:#30d158; --ok-soft:#13351f; --warn:#ff9f0a; --warn-soft:#3d2e12;
+  --danger:#ff453a; --danger-soft:#3d1a18;
+  --shadow:0 1px 3px rgba(0,0,0,.4);
 }
 html{color-scheme:light}
 html[data-theme="dark"]{color-scheme:dark}
@@ -223,7 +223,7 @@ input[type="month"]{width:160px}
 .vtl-cell:nth-child(odd){background:rgba(127,127,127,.045)}
 .vtl-half{position:absolute;left:0;right:0;border-top:1px dashed var(--border);opacity:.45;z-index:1}
 .vtl-evs{position:absolute;inset:0;z-index:2}
-.vtl-ev{position:absolute;left:10px;right:10px;border-radius:8px;padding:3px 9px;font-size:12.5px;display:flex;gap:8px;align-items:baseline;overflow:hidden;background:var(--card);border:1px solid var(--border);border-left:4px solid var(--accent);box-shadow:0 1px 4px rgba(16,24,40,.10)}
+.vtl-ev{position:absolute;left:10px;right:10px;border-radius:8px;padding:3px 9px;font-size:12.5px;display:flex;gap:8px;align-items:baseline;overflow:hidden;border-left:4px solid var(--accent);box-shadow:0 1px 4px rgba(16,24,40,.08)}
 .vtl-ev .vtl-etime{font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0;color:var(--text)}
 .vtl-etxt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vtl-ev.t-plan{border-left-color:var(--accent)}
@@ -259,7 +259,7 @@ input[type="month"]{width:160px}
 .wvtl-cell{flex:1;border-bottom:1px solid var(--border);opacity:.5}
 .wvtl-cell:nth-child(odd){background:rgba(127,127,127,.04)}
 .wvtl-evs{position:absolute;inset:0;z-index:2}
-.wvtl-ev{position:absolute;left:2px;right:2px;border-radius:5px;padding:1px 4px;font-size:10.5px;overflow:hidden;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent);box-shadow:0 1px 2px rgba(16,24,40,.08);white-space:nowrap;text-overflow:ellipsis}
+.wvtl-ev{position:absolute;left:2px;right:2px;border-radius:5px;padding:1px 4px;font-size:10.5px;overflow:hidden;border-left:3px solid var(--accent);box-shadow:0 1px 2px rgba(16,24,40,.08);white-space:nowrap;text-overflow:ellipsis}
 .wvtl-ev .wvtl-et{font-weight:700;margin-right:3px}
 .wvtl-ev.t-plan{border-left-color:var(--accent)}
 .wvtl-ev.t-todo{border-left-color:var(--warn)}
@@ -284,6 +284,8 @@ input[type="month"]{width:160px}
 /* ===== 弹窗 ===== */
 .modal-mask{position:fixed;inset:0;background:rgba(10,14,22,.45);z-index:80;display:flex;align-items:center;justify-content:center}
 .modal-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;width:min(420px,92vw);box-shadow:0 12px 40px rgba(0,0,0,.25)}
+#rec-timer-pill{position:fixed;right:18px;bottom:18px;z-index:90;background:var(--card);border:1px solid var(--border);border-radius:24px;padding:9px 16px;font-size:13.5px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.18);cursor:pointer;color:var(--accent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);max-width:60vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#rec-timer-pill:hover{background:var(--accent);color:#fff}
 .modal-box h3{margin-bottom:12px}
 .modal-box .row{margin-bottom:12px}
 .modal-box .row:last-child{margin-bottom:0}
@@ -334,6 +336,7 @@ input[type="month"]{width:160px}
   </main>
 </div>
 <div id="toasts"></div>
+<div id="rec-timer-pill" data-act="rec-timer" title="点击结束并保存"></div>
 <div class="modal-mask" id="rec-mask" style="display:none">
   <div class="modal-box">
     <div class="row" style="justify-content:space-between;margin-bottom:12px">
@@ -342,11 +345,6 @@ input[type="month"]{width:160px}
         <button data-act="rec-mode" data-m="rem">⏰ 提醒</button>
       </div>
       <h3 style="margin:0" id="rec-title">记录这个时间在做什么</h3>
-    </div>
-    <div id="rec-fields-timer" style="display:none">
-      <div class="hint" style="margin-bottom:10px">⏱️ 从现在开始计时，做完点「结束」自动保存开始-结束时间段</div>
-      <div class="row" style="margin-bottom:8px"><span style="font-size:13px;color:var(--text2)">分类</span><select id="rec-cat-timer" style="flex:1"></select></div>
-      <input type="text" id="rec-text-timer" class="grow" style="width:100%;margin-bottom:12px" placeholder="现在要做什么？如：背单词、写作业…" data-enter="#btn-rec-save">
     </div>
     <div id="rec-fields-log">
       <div class="row">
@@ -357,6 +355,7 @@ input[type="month"]{width:160px}
       </div>
       <div class="row" style="margin:8px 0"><span style="font-size:13px;color:var(--text2)">分类</span><select id="rec-cat" style="flex:1"></select></div>
       <input type="text" id="rec-text" class="grow" style="width:100%;margin-bottom:12px" placeholder="比如：背单词、打游戏、发呆…" data-enter="#btn-rec-save">
+      <div class="hint" style="margin-bottom:12px">⏱️ 想记录正在做的事？<button class="btn small" data-act="rec-start-timer" style="margin-left:4px">从现在开始计时</button></div>
     </div>
     <div id="rec-fields-rem" style="display:none">
       <div class="row">
@@ -542,9 +541,8 @@ function catSelect(id, sel){
 }
 function fillCatSelects(){
   const opts = TIME_CATS.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-  const a = $('#rec-cat'), b = $('#rec-cat-timer');
+  const a = $('#rec-cat');
   if (a) a.innerHTML = opts;
-  if (b) b.innerHTML = opts;
 }
 /* ================= UI 状态 ================= */
 const UI = {
@@ -621,8 +619,9 @@ function renderDashboard(){
       const top = ((h * 60 + m) / 1440 * 100).toFixed(2);
       const hgt = Math.max((e.dur || 30) / 1440 * 100, 3.2).toFixed(2);
       const tL = e.type === 'log' && e.dur ? esc(e.time) + '-' + esc(endTime(e.time, e.dur)) : esc(e.time);
-      const bColor = e.type === 'log' ? `border-left-color:${catColor(e.cat)};` : '';
-      return `<div class="wvtl-ev t-${e.type} ${e.done ? 'done' : ''}" style="top:${top}%;height:${hgt}%;${bColor}" title="${tL} ${esc(e.text)}"><span class="wvtl-et">${tL}</span>${esc(e.text)}${e.type === 'log' ? `<span class="ev-x" data-act="log-del" data-id="${e.id}">✕</span>` : ''}${e.type === 'rem' ? `<span class="ev-x" data-act="rem-del" data-id="${e.id}">✕</span>` : ''}</div>`;
+      const col = e.type === 'log' ? catColor(e.cat) : ({plan:'#007aff', todo:'#ff9500', study:'#9365e0', rem:'#ff3b30'}[e.type] || '#0ea5a4');
+      const bColor = `border-left-color:${col};`;
+      return `<div class="wvtl-ev t-${e.type} ${e.done ? 'done' : ''}" style="top:${top}%;height:${hgt}%;${bColor}background:${hexToRgba(col, .14)}" title="${tL} ${esc(e.text)}"><span class="wvtl-et">${tL}</span>${esc(e.text)}${e.type === 'log' ? `<span class="ev-x" data-act="log-del" data-id="${e.id}">✕</span>` : ''}${e.type === 'rem' ? `<span class="ev-x" data-act="rem-del" data-id="${e.id}">✕</span>` : ''}</div>`;
     }).join('');
     const nowLine = isToday ? `<div class="wvtl-now" style="top:${(nowMin / 1440 * 100).toFixed(2)}%"></div>` : '';
     return `<div class="wvtl-col ${isToday ? 'today' : ''}" data-act="tl-record" data-date="${iso}"><div class="wvtl-cells">${cellHtml}</div><div class="wvtl-evs">${evHtml}</div>${nowLine}</div>`;
@@ -656,7 +655,7 @@ function renderDashboard(){
       <div class="card">
         <div class="row" style="justify-content:space-between;margin-bottom:8px">
           <h3 style="margin-bottom:0">📅 本周日历（${curWk.slice(5)} 起 · 第 ${dayOfWeek}/7 天）</h3>
-          <span style="font-size:12px;color:var(--text2);white-space:nowrap"><i class="lg t-plan"></i>安排 <i class="lg t-todo"></i>待办 <i class="lg t-study"></i>学习 <i class="lg t-log"></i>记录 <i class="lg t-rem"></i>提醒<button class="btn small primary" data-act="log-now" style="margin-left:10px">✏️ 记录现在</button><button class="btn small" data-act="rec-timer" style="margin-left:6px">▶️ 计时</button><button class="btn small" data-act="rem-now" style="margin-left:6px">⏰ 加提醒</button></span>
+          <span style="font-size:12px;color:var(--text2);white-space:nowrap"><i class="lg t-plan"></i>安排 <i class="lg t-todo"></i>待办 <i class="lg t-study"></i>学习 <i class="lg t-log"></i>记录 <i class="lg t-rem"></i>提醒<button class="btn small primary" data-act="log-now" style="margin-left:10px">✏️ 记录</button><button class="btn small" data-act="rem-now" style="margin-left:6px">⏰ 加提醒</button></span>
         </div>
         <div class="wvtl">
           <div class="wvtl-head"><div class="wvtl-axis-h"></div>${wkHead}</div>
@@ -715,47 +714,32 @@ function openRecModal(date, time, mode){
   $('#rec-time').value = t0;
   $('#rec-time-end').value = endTime(t0, 30);
   $('#rec-text').value = '';
-  $('#rec-text-timer').value = '';
   $('#rem-time').value = time || new Date().toTimeString().slice(0, 5);
   $('#rem-text').value = '';
   $('#rem-repeat').value = 'once';
-  if (mode === 'timer'){
-    $('#rec-seg').style.display = 'none';
-    $('#rec-fields-timer').style.display = '';
-    $('#rec-fields-log').style.display = 'none';
-    $('#rec-fields-rem').style.display = 'none';
-    $('#rec-title').textContent = '⏱️ 计时记录';
-    $('#btn-rec-save').textContent = '▶️ 开始计时';
-    $('#btn-rec-save').dataset.act = 'timer-start';
-  } else {
-    $('#rec-seg').style.display = '';
-    $('#rec-fields-timer').style.display = 'none';
-    document.querySelectorAll('[data-act="rec-mode"]').forEach(b => b.classList.toggle('sel', b.dataset.m === UI.recMode));
-    $('#rec-fields-log').style.display = UI.recMode === 'log' ? '' : 'none';
-    $('#rec-fields-rem').style.display = UI.recMode === 'rem' ? '' : 'none';
-    $('#rec-title').textContent = UI.recMode === 'log' ? '记录这个时间在做什么' : '给这个时间加个提醒';
-    $('#btn-rec-save').textContent = UI.recMode === 'log' ? '✓ 保存记录' : '⏰ 添加提醒';
-    $('#btn-rec-save').dataset.act = UI.recMode === 'log' ? 'log-add' : 'rem-add';
-  }
+  document.querySelectorAll('[data-act="rec-mode"]').forEach(b => b.classList.toggle('sel', b.dataset.m === UI.recMode));
+  $('#rec-fields-log').style.display = UI.recMode === 'log' ? '' : 'none';
+  $('#rec-fields-rem').style.display = UI.recMode === 'rem' ? '' : 'none';
+  $('#rec-title').textContent = UI.recMode === 'log' ? '记录这个时间在做什么' : '给这个时间加个提醒';
+  $('#btn-rec-save').textContent = UI.recMode === 'log' ? '✓ 保存记录' : '⏰ 添加提醒';
+  $('#btn-rec-save').dataset.act = UI.recMode === 'log' ? 'log-add' : 'rem-add';
   $('#rec-mask').style.display = 'flex';
-  setTimeout(() => (UI.recMode === 'timer' ? $('#rec-text-timer') : (UI.recMode === 'log' ? $('#rec-text') : $('#rem-text'))).focus(), 60);
+  setTimeout(() => (UI.recMode === 'log' ? $('#rec-text') : $('#rem-text')).focus(), 60);
 }
 function closeRecModal(){ $('#rec-mask').style.display = 'none'; }
 function renderRecTimer(){
   const t = UI.recTimer;
-  const btn = document.querySelector('[data-act="rec-timer"]');
-  if (!btn) return;
+  const pill = $('#rec-timer-pill');
+  if (!pill) return;
   if (t.running){
     const sec = Math.floor((Date.now() - t.start) / 1000);
     const mm = String(Math.floor(sec / 60)).padStart(2, '0');
     const ss = String(sec % 60).padStart(2, '0');
-    btn.className = 'btn small ok';
-    btn.innerHTML = '⏱️ ' + mm + ':' + ss + ' · ■ 结束';
-    btn.title = t.text;
+    pill.style.display = 'flex';
+    pill.innerHTML = '⏱️ ' + mm + ':' + ss + ' ' + esc(t.text) + ' · ■ 结束';
+    pill.title = t.text;
   } else {
-    btn.className = 'btn small';
-    btn.innerHTML = '▶️ 计时';
-    btn.title = '开始计时：从现在开始，点结束自动保存时间段';
+    pill.style.display = 'none';
   }
 }
 /* ----- 待办 ----- */
@@ -855,8 +839,9 @@ function renderTimeline(date){
     const top = (minOf(e.time) / 1440 * 100).toFixed(2);
     const hgt = Math.max((e.dur || 30) / 1440 * 100, 3.2).toFixed(2);
     const tL = e.type === 'log' && e.dur ? esc(e.time) + '-' + esc(endTime(e.time, e.dur)) : esc(e.time);
-    const bColor = e.type === 'log' ? `border-left-color:${catColor(e.cat)};` : '';
-    return `<div class="vtl-ev t-${e.type} ${e.done ? 'done' : ''}" style="top:${top}%;height:${hgt}%;${bColor}" title="${tL} ${esc(e.text)}">
+    const col = e.type === 'log' ? catColor(e.cat) : ({plan:'#007aff', todo:'#ff9500', study:'#9365e0', rem:'#ff3b30'}[e.type] || '#0ea5a4');
+    const bColor = `border-left-color:${col};`;
+    return `<div class="vtl-ev t-${e.type} ${e.done ? 'done' : ''}" style="top:${top}%;height:${hgt}%;${bColor}background:${hexToRgba(col, .14)}" title="${tL} ${esc(e.text)}">
       <span class="vtl-etime">${tL}</span><span class="vtl-etxt">${esc(e.text)}</span>${e.type === 'log' ? `<span class="ev-x" data-act="log-del" data-id="${e.id}">✕</span>` : ''}${e.type === 'rem' ? `<span class="ev-x" data-act="rem-del" data-id="${e.id}">✕</span>` : ''}</div>`;
   }).join('');
   const noTime = evts.filter(e => !e.time).map(e => `<span class="badge gray" style="margin-right:6px">${e.type === 'plan' ? '🗓️' : e.type === 'todo' ? '✅' : e.type === 'log' ? '🕐' : '📖'} ${esc(e.text)}</span>`).join('');
@@ -903,8 +888,7 @@ function renderTimeline(date){
       <span class="legend"><i class="lg t-rem"></i>提醒</span>
       <span style="flex:1"></span>
       <span style="font-size:12px;color:var(--text2)">👆 点击空白处记录 / 加提醒 · 红点线 = 现在</span>
-      <button class="btn small primary" data-act="log-now">✏️ 记录现在</button>
-      <button class="btn small" data-act="rec-timer">▶️ 计时</button>
+      <button class="btn small primary" data-act="log-now">✏️ 记录</button>
       <button class="btn small" data-act="rem-now">⏰ 加提醒</button>
     </div>
     ${noTime ? `<div class="vtl-allday"><span class="vtl-ad-label">全天</span>${noTime}</div>` : ''}
@@ -1635,7 +1619,6 @@ document.addEventListener('click', e => {
       document.querySelectorAll('[data-act="rec-mode"]').forEach(b => b.classList.toggle('sel', b === actEl));
       $('#rec-fields-log').style.display = UI.recMode === 'log' ? '' : 'none';
       $('#rec-fields-rem').style.display = UI.recMode === 'rem' ? '' : 'none';
-      $('#rec-fields-timer').style.display = 'none';
       $('#rec-title').textContent = UI.recMode === 'log' ? '记录这个时间在做什么' : '给这个时间加个提醒';
       $('#btn-rec-save').textContent = UI.recMode === 'log' ? '✓ 保存记录' : '⏰ 添加提醒';
       $('#btn-rec-save').dataset.act = UI.recMode === 'log' ? 'log-add' : 'rem-add';
@@ -1652,8 +1635,6 @@ document.addEventListener('click', e => {
         UI.recTimer = {running:false, start:0, date:'', text:'', cat:'', iv:null};
         save(); renderDashboard(); renderPlan(); renderRecTimer();
         toast('已保存：' + t.text + '（' + dur + ' 分钟）⏱️');
-      } else {
-        openRecModal(todayISO(), undefined, 'timer');
       }
       break;
     }
@@ -1669,11 +1650,12 @@ document.addEventListener('click', e => {
       toast('计时开始 ⏱️ ' + todo.text);
       break;
     }
-    case 'timer-start': {
-      const text = $('#rec-text-timer').value.trim();
-      if (!text){ toast('写一下要做什么', 'warn'); return; }
+    case 'rec-start-timer': {
       const t = UI.recTimer;
-      t.running = true; t.start = Date.now(); t.date = todayISO(); t.text = text; t.cat = $('#rec-cat-timer').value || '临时事务';
+      if (t.running){ toast('已有计时进行中，点右下角的计时条结束', 'warn'); break; }
+      const text = $('#rec-text').value.trim();
+      if (!text){ toast('写一下要做什么', 'warn'); return; }
+      t.running = true; t.start = Date.now(); t.date = todayISO(); t.text = text; t.cat = $('#rec-cat').value || '临时事务';
       t.iv = setInterval(renderRecTimer, 1000);
       closeRecModal();
       renderDashboard(); renderPlan(); renderRecTimer();
