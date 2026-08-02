@@ -209,10 +209,10 @@ input[type="month"]{width:160px}
 .tl2-item.done .tl2-text{text-decoration:line-through;color:var(--text2)}
 .tl2-text{font-size:14.5px;line-height:1.55}
 /* ===== 日历式垂直时间轴 ===== */
-.vtl{position:relative;height:624px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg)}
-.vtl-axis{position:absolute;left:0;top:0;bottom:0;width:56px;z-index:3;border-right:1px solid var(--border);background:var(--bg)}
+.vtl{position:relative;height:312px;display:flex;overflow-y:auto;border:1px solid var(--border);border-radius:12px;background:var(--bg)}
+.vtl-axis{width:56px;flex-shrink:0;position:relative;z-index:3;border-right:1px solid var(--border);background:var(--bg);height:624px}
 .vtl-h{position:absolute;right:8px;transform:translateY(-50%);font-size:10.5px;color:var(--text2);font-variant-numeric:tabular-nums}
-.vtl-body{position:absolute;left:56px;right:0;top:0;bottom:0}
+.vtl-body{flex:1;min-width:0;position:relative;height:624px}
 .vtl-cells{position:absolute;inset:0;display:flex;flex-direction:column;z-index:0}
 .vtl-cell{flex:1;border-bottom:1px solid var(--border);opacity:.55}
 .vtl-cell:nth-child(odd){background:rgba(127,127,127,.045)}
@@ -243,10 +243,10 @@ input[type="month"]{width:160px}
 .wvtl-day-h .wvtl-dn{display:block;font-size:15px;font-weight:800;color:var(--text);margin-top:1px}
 .wvtl-day-h.today{color:var(--accent);font-weight:700}
 .wvtl-day-h.today .wvtl-dn{color:var(--accent)}
-.wvtl-body{display:flex;height:560px;overflow-x:auto}
-.wvtl-axis{width:56px;flex-shrink:0;position:relative;border-right:1px solid var(--border);background:var(--bg);z-index:3}
+.wvtl-body{display:flex;height:280px;overflow:auto}
+.wvtl-axis{width:56px;flex-shrink:0;position:relative;border-right:1px solid var(--border);background:var(--bg);z-index:3;height:560px}
 .wvtl-h{position:absolute;right:8px;transform:translateY(-50%);font-size:10.5px;color:var(--text2);font-variant-numeric:tabular-nums}
-.wvtl-cols{flex:1;display:flex;min-width:0}
+.wvtl-cols{flex:1;display:flex;min-width:0;height:560px}
 .wvtl-col{flex:1;min-width:64px;position:relative;border-left:1px solid var(--border)}
 .wvtl-col.today{background:rgba(67,120,238,.04)}
 .wvtl-cells{position:absolute;inset:0;display:flex;flex-direction:column}
@@ -265,6 +265,8 @@ input[type="month"]{width:160px}
 .wvtl-ev .ev-x:hover{color:var(--danger)}
 .wvtl-now{position:absolute;left:0;right:0;height:2px;background:var(--danger);z-index:5}
 .wvtl-now::before{content:'';position:absolute;left:-4px;top:-4px;width:9px;height:9px;border-radius:50%;background:var(--danger)}
+.wvtl-body::-webkit-scrollbar,.vtl::-webkit-scrollbar{width:6px;height:6px}
+.wvtl-body::-webkit-scrollbar-thumb,.vtl::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 .legend{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--text2);margin-right:14px}
 .legend .lg{width:10px;height:10px;border-radius:3px;display:inline-block}
 .lg.t-plan{background:var(--accent)}
@@ -632,6 +634,8 @@ function renderDashboard(){
       <button class="btn" data-nav-jump="reminders">⏰ 加提醒</button>
     </div>
   </div>`;
+  const wb = document.querySelector('.wvtl-body');
+  if (wb) wb.scrollTop = Math.max(0, (now.getHours() - 4) * 23.333);
 }
 function openRecModal(date, time){
   UI.recDate = date || todayISO();
@@ -713,6 +717,10 @@ function renderPlan(){
   <div id="plan-daily" style="${UI.planSub === 'daily' ? '' : 'display:none'}">${dailyHtml}</div>
   <div id="plan-weekly" style="${UI.planSub === 'weekly' ? '' : 'display:none'}">${weeklyHtml}</div>
   <div id="plan-timeline" style="${UI.planSub === 'timeline' ? '' : 'display:none'}">${timelineHtml}</div>`;
+  setTimeout(() => {
+    const tb = document.querySelector('#plan-timeline .vtl');
+    if (tb) tb.scrollTop = Math.max(0, (new Date().getHours() - 4) * 26);
+  }, 0);
 }
 function renderTimeline(date){
   const today = todayISO();
