@@ -338,7 +338,6 @@ input[type="month"]{width:160px}
     <section class="tab" id="tab-ledger"><div class="tab-head"><h2>💸 记账</h2><p>随手记一笔，月底知道自己钱花哪了。</p></div><div id="body-ledger"></div></section>
     <section class="tab" id="tab-habits"><div class="tab-head"><h2>🔥 习惯养成</h2><p>每天打卡，别让连续记录断掉。</p></div><div id="body-habits"></div></section>
     <section class="tab" id="tab-study"><div class="tab-head"><h2>🍅 学习计划</h2><p>定每周目标时长，用番茄钟专注计时。</p></div><div id="body-study"></div></section>
-    <section class="tab" id="tab-reminders"><div class="tab-head"><h2>⏰ 提醒</h2><p>到点弹通知 + 响铃，治「一拿起手机就放不下」。</p></div><div id="body-reminders"></div></section>
     <section class="tab" id="tab-settings"><div class="tab-head"><h2>⚙️ 设置 / 备份</h2><p>提醒设置、主题、数据备份。</p></div><div id="body-settings"></div></section>
   </main>
 </div>
@@ -346,13 +345,7 @@ input[type="month"]{width:160px}
 <div id="rec-timer-pill" data-act="rec-timer" title="点击结束并保存"></div>
 <div class="modal-mask" id="rec-mask" style="display:none">
   <div class="modal-box">
-    <div class="row" style="justify-content:space-between;margin-bottom:12px">
-      <div class="seg" id="rec-seg">
-        <button class="sel" data-act="rec-mode" data-m="log">✏️ 记录</button>
-        <button data-act="rec-mode" data-m="rem">⏰ 提醒</button>
-      </div>
-      <h3 style="margin:0" id="rec-title">记录这个时间在做什么</h3>
-    </div>
+    <h3 id="rec-title" style="margin-bottom:12px">记录这个时间在做什么</h3>
     <div id="rec-fields-log">
       <div class="row">
         <span style="font-size:13px;color:var(--text2)">开始</span>
@@ -363,17 +356,6 @@ input[type="month"]{width:160px}
       <div class="row" style="margin:8px 0"><span style="font-size:13px;color:var(--text2)">分类</span><select id="rec-cat" style="flex:1"></select></div>
       <input type="text" id="rec-text" class="grow" style="width:100%;margin-bottom:12px" placeholder="比如：背单词、打游戏、发呆…" data-enter="#btn-rec-save">
       <div class="hint" style="margin-bottom:12px">⏱️ 想记录正在做的事？<button class="btn small" data-act="rec-start-timer" style="margin-left:4px">从现在开始计时</button></div>
-    </div>
-    <div id="rec-fields-rem" style="display:none">
-      <div class="row">
-        <input type="time" id="rem-time" style="width:110px">
-        <select id="rem-repeat" style="flex:1">
-          <option value="once">⏱ 不重复（这一天）</option>
-          <option value="daily">🔁 每天</option>
-        </select>
-      </div>
-      <input type="text" id="rem-text" class="grow" style="width:100%;margin-bottom:12px" placeholder="提醒内容，如：放下手机，起来走走" data-enter="#btn-rec-save">
-      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">🔔 到点弹系统通知 + 响铃。iPhone：用 Safari 打开并「添加到主屏幕」（iOS 16.4+）。</div>
     </div>
     <div class="row" style="margin-bottom:0;justify-content:flex-end">
       <button class="btn" id="btn-rec-cancel" data-act="rec-cancel">取消</button>
@@ -485,7 +467,7 @@ function requestNotify(){
   if (Notification.permission === 'granted'){ toast('已开启桌面通知 ✅'); return; }
   Notification.requestPermission().then(p => {
     toast(p === 'granted' ? '桌面通知已开启 ✅' : '通知被拒绝，提醒将只响铃 + 页面内提示', p === 'granted' ? 'ok' : 'warn');
-    renderSettings(); renderReminders();
+    renderSettings();
   });
 }
 
@@ -590,13 +572,14 @@ const UI = {
   todoFilter: 'open',
   remType: 'interval',
   aiLog: [],
+  editLogId: null,
   pomo: {running:false, phase:'focus', total:25*60, left:25*60, cycles:0, subj:'', timer:null, startTime:0},
 };
 
 /* ================= 渲染 ================= */
 function renderAll(){
   renderDashboard(); renderTodos(); renderPlan(); renderLedger();
-  renderHabits(); renderStudy(); renderReminders(); renderSettings();
+  renderHabits(); renderStudy(); renderSettings();
 }
 function goTab(t){
   UI.tab = t;
@@ -610,7 +593,6 @@ function dayEvents(date){
   S.todos.filter(t => t.date === date && t.time).forEach(t => evts.push({time: t.time, text: t.text, type: 'todo', done: t.done, dur: 30}));
   S.studyLog.filter(l => l.date === date).forEach(l => evts.push({time: l.time || '', text: l.subj + ' · ' + l.minutes + ' 分钟', type: 'study', done: false, dur: Math.max(20, l.minutes)}));
   (S.log || []).filter(l => l.date === date).forEach(l => evts.push({time: l.time || '', text: l.text, cat: l.cat || '临时事务', type: 'log', done: false, dur: l.dur || 30, id: l.id}));
-  S.reminders.filter(r => r.enabled && r.time && (r.type === 'daily' || (r.type === 'once' && r.date === date))).forEach(r => evts.push({time: r.time, text: '⏰ ' + r.text, type: 'rem', done: false, dur: 15, id: r.id}));
   return evts.sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
 }
 function renderDashboard(){
@@ -621,18 +603,18 @@ function renderDashboard(){
   const curWk = weekKey(today);
   const wkDays = weekDays(curWk);
 
-  // 接下来2小时会响的提醒
+  // 接下来2小时到点的 Reminder
   const now = new Date();
   const nowMin = now.getHours() * 60 + now.getMinutes();
-  const upcoming = S.reminders.filter(r => {
-    if (!r.enabled) return false;
-    if (r.type === 'once'){ if (r.date !== today || !r.time) return false; const [h, m] = r.time.split(':').map(Number); const t = h*60+m; return t >= nowMin && t <= nowMin + 120; }
-    if (r.type === 'daily'){ if (!r.time) return false; const [h, m] = r.time.split(':').map(Number); const t = h*60+m; return t >= nowMin && t <= nowMin + 120; }
-    return false;
+  const upcoming = S.todos.filter(t => {
+    if (t.done || !t.time || t.date !== today) return false;
+    const [h, m] = t.time.split(':').map(Number);
+    const tm = h * 60 + m;
+    return tm >= nowMin && tm <= nowMin + 120;
   }).sort((a, b) => a.time.localeCompare(b.time));
   const upcomingText = upcoming.length
-    ? upcoming.slice(0, 3).map(r => `<span class="badge warn" style="margin-right:6px">🕐 ${esc(r.time)} ${esc(r.text)}</span>`).join('')
-    : '<span style="color:var(--text2)">接下来 2 小时没有待响提醒</span>';
+    ? upcoming.slice(0, 3).map(t => `<span class="badge warn" style="margin-right:6px">🕐 ${esc(t.time)} ${esc(t.text)}</span>`).join('')
+    : '<span style="color:var(--text2)">接下来 2 小时没有待响的 Reminder</span>';
 
   // 周日历（周六~周五，7 列 × 24h）
   const dow0 = (new Date().getDay() + 6) % 7;
@@ -653,7 +635,7 @@ function renderDashboard(){
       const tL = (e.type === 'log' || e.type === 'study') && e.dur ? esc(e.time) + '-' + esc(endTime(e.time, e.dur)) : esc(e.time);
       const col = e.type === 'log' ? catColor(e.cat) : ({plan:'#007aff', todo:'#ff9500', study:'#9365e0', rem:'#ff3b30'}[e.type] || '#0ea5a4');
       const bColor = `border-left-color:${col};`;
-      return `<div class="wvtl-ev t-${e.type} ${e.done ? 'done' : ''}" style="top:${top}%;height:${hgt}%;${bColor}background:${hexToRgba(col, .14)}" title="${tL} ${esc(e.text)}"><span class="wvtl-et">${tL}</span>${esc(e.text)}${e.type === 'log' ? `<span class="ev-x" data-act="log-del" data-id="${e.id}">✕</span>` : ''}${e.type === 'rem' ? `<span class="ev-x" data-act="rem-del" data-id="${e.id}">✕</span>` : ''}</div>`;
+      return `<div class="wvtl-ev t-${e.type} ${e.done ? 'done' : ''}" style="top:${top}%;height:${hgt}%;${bColor}background:${hexToRgba(col, .14)}" title="${tL} ${esc(e.text)}" ${e.type === 'log' ? `data-act="log-edit" data-id="${e.id}"` : ''}><span class="wvtl-et">${tL}</span>${esc(e.text)}${e.type === 'log' ? `<span class="ev-x" data-act="log-del" data-id="${e.id}">✕</span>` : ''}</div>`;
     }).join('');
     const nowLine = isToday ? `<div class="wvtl-now" style="top:${(nowMin / 1440 * 100).toFixed(2)}%"></div>` : '';
     return `<div class="wvtl-col ${isToday ? 'today' : ''}" data-act="tl-record" data-date="${iso}"><div class="wvtl-cells">${cellHtml}</div><div class="wvtl-evs">${evHtml}</div>${nowLine}</div>`;
@@ -683,7 +665,6 @@ function renderDashboard(){
     ${dailyH.length ? `<div style="font-size:12.5px;color:var(--text2);margin:2px 0 4px">🔁 每日（每天自动出现，点圆圈打卡）</div>${dailyH.map(habitCard).join('')}` : ''}
     ${weeklyH.length ? `<div style="font-size:12.5px;color:var(--text2);margin:8px 0 4px">📆 每周（本周打满目标次数即可）</div>${weeklyH.map(habitCard).join('')}` : ''}
   ` : `<div class="empty" style="padding:10px"><span class="big">🔥</span>还没有习惯<br><a href="#" data-nav-jump="habits" style="color:var(--accent);font-size:13px">去建一个 →</a></div>`;
-  const remCount = S.reminders.filter(r => r.enabled).length;
 
   // Reminder 列表
   const todoItems = [...tds].sort((a, b) => {
@@ -707,7 +688,7 @@ function renderDashboard(){
       <div class="card">
         <div class="row" style="justify-content:space-between;margin-bottom:8px">
           <h3 style="margin-bottom:0">📅 本周日历（${curWk.slice(5)} 起 · 第 ${dayOfWeek}/7 天）</h3>
-          <span style="font-size:12px;color:var(--text2);white-space:nowrap"><i class="lg t-plan"></i>安排 <i class="lg t-todo"></i>待办 <i class="lg t-study"></i>学习 <i class="lg t-log"></i>记录 <i class="lg t-rem"></i>提醒<button class="btn small primary" data-act="log-now" style="margin-left:10px">✏️ 记录</button><button class="btn small" data-act="rem-now" style="margin-left:6px">⏰ 加提醒</button></span>
+          <span style="font-size:12px;color:var(--text2);white-space:nowrap"><i class="lg t-plan"></i>安排 <i class="lg t-todo"></i>待办 <i class="lg t-study"></i>学习 <i class="lg t-log"></i>记录<button class="btn small primary" data-act="log-now" style="margin-left:10px">✏️ 记录</button></span>
         </div>
         <div class="wvtl">
           <div class="wvtl-head"><div class="wvtl-axis-h"></div>${wkHead}</div>
@@ -731,7 +712,6 @@ function renderDashboard(){
       <div class="card">
         <h3>🔥 习惯打卡 <a href="#" data-nav-jump="habits" style="font-size:12.5px;color:var(--accent);font-weight:400">管理 →</a></h3>
         ${habitHtml}
-        <div class="hint" style="margin-top:6px">⏰ ${remCount} 条提醒启用 · <a href="#" data-nav-jump="reminders" style="color:var(--accent)">管理提醒 →</a></div>
       </div>
     </div>
   </div>
@@ -747,7 +727,6 @@ function renderDashboard(){
       <button class="btn small" data-nav-jump="ledger">💸 记一笔</button>
       <button class="btn small" data-nav-jump="habits">🔥 打卡</button>
       <button class="btn small" data-nav-jump="study">🍅 番茄钟</button>
-      <button class="btn small" data-act="rem-now">⏰ 提醒</button>
     </div>
   </div>`;
   const wb = document.querySelector('.wvtl-body');
@@ -899,24 +878,14 @@ function aiAsk(){
   $('#ai-input').value = '';
   setTimeout(() => aiAppend('ai', aiAnswer(q)), 150);
 }
-function openRecModal(date, time, mode){
+function openRecModal(date, time){
   UI.recDate = date || todayISO();
-  UI.recMode = mode || 'log';
   const t0 = time || new Date().toTimeString().slice(0, 5);
   $('#rec-time').value = t0;
   $('#rec-time-end').value = endTime(t0, 30);
   $('#rec-text').value = '';
-  $('#rem-time').value = time || new Date().toTimeString().slice(0, 5);
-  $('#rem-text').value = '';
-  $('#rem-repeat').value = 'once';
-  document.querySelectorAll('[data-act="rec-mode"]').forEach(b => b.classList.toggle('sel', b.dataset.m === UI.recMode));
-  $('#rec-fields-log').style.display = UI.recMode === 'log' ? '' : 'none';
-  $('#rec-fields-rem').style.display = UI.recMode === 'rem' ? '' : 'none';
-  $('#rec-title').textContent = UI.recMode === 'log' ? '记录这个时间在做什么' : '给这个时间加个提醒';
-  $('#btn-rec-save').textContent = UI.recMode === 'log' ? '✓ 保存记录' : '⏰ 添加提醒';
-  $('#btn-rec-save').dataset.act = UI.recMode === 'log' ? 'log-add' : 'rem-add';
   $('#rec-mask').style.display = 'flex';
-  setTimeout(() => (UI.recMode === 'log' ? $('#rec-text') : $('#rem-text')).focus(), 60);
+  setTimeout(() => $('#rec-text').focus(), 60);
 }
 function closeRecModal(){ $('#rec-mask').style.display = 'none'; }
 function renderRecTimer(){
@@ -1017,7 +986,6 @@ function renderTimeline(date){
   todos.forEach(t => evts.push({time: t.time, text: t.text, type: 'todo', done: t.done, dur: 30}));
   study.forEach(l => evts.push({time: l.time || '', text: l.subj + ' · ' + l.minutes + ' 分钟', type: 'study', done: false, dur: Math.max(20, l.minutes)}));
   (S.log || []).filter(l => l.date === date).forEach(l => evts.push({time: l.time || '', text: l.text, cat: l.cat || '临时事务', type: 'log', done: false, dur: l.dur || 30, id: l.id}));
-  S.reminders.filter(r => r.enabled && r.time && (r.type === 'daily' || (r.type === 'once' && r.date === date))).forEach(r => evts.push({time: r.time, text: '⏰ ' + r.text, type: 'rem', done: false, dur: 15, id: r.id}));
   evts.sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
 
   const minOf = t => { if (!t) return null; const [h, m] = t.split(':').map(Number); return h * 60 + m; };
@@ -1033,8 +1001,8 @@ function renderTimeline(date){
     const tL = (e.type === 'log' || e.type === 'study') && e.dur ? esc(e.time) + '-' + esc(endTime(e.time, e.dur)) : esc(e.time);
     const col = e.type === 'log' ? catColor(e.cat) : ({plan:'#007aff', todo:'#ff9500', study:'#9365e0', rem:'#ff3b30'}[e.type] || '#0ea5a4');
     const bColor = `border-left-color:${col};`;
-    return `<div class="vtl-ev t-${e.type} ${e.done ? 'done' : ''}" style="top:${top}%;height:${hgt}%;${bColor}background:${hexToRgba(col, .14)}" title="${tL} ${esc(e.text)}">
-      <span class="vtl-etime">${tL}</span><span class="vtl-etxt">${esc(e.text)}</span>${e.type === 'log' ? `<span class="ev-x" data-act="log-del" data-id="${e.id}">✕</span>` : ''}${e.type === 'rem' ? `<span class="ev-x" data-act="rem-del" data-id="${e.id}">✕</span>` : ''}</div>`;
+    return `<div class="vtl-ev t-${e.type} ${e.done ? 'done' : ''}" style="top:${top}%;height:${hgt}%;${bColor}background:${hexToRgba(col, .14)}" title="${tL} ${esc(e.text)}" ${e.type === 'log' ? `data-act="log-edit" data-id="${e.id}"` : ''}>
+      <span class="vtl-etime">${tL}</span><span class="vtl-etxt">${esc(e.text)}</span>${e.type === 'log' ? `<span class="ev-x" data-act="log-del" data-id="${e.id}">✕</span>` : ''}</div>`;
   }).join('');
   const noTime = evts.filter(e => !e.time).map(e => `<span class="badge gray" style="margin-right:6px">${e.type === 'plan' ? '🗓️' : e.type === 'todo' ? '✅' : e.type === 'log' ? '🕐' : '📖'} ${esc(e.text)}</span>`).join('');
   const studyMin = study.reduce((a, b) => a + b.minutes, 0);
@@ -1077,11 +1045,9 @@ function renderTimeline(date){
       <span class="legend"><i class="lg t-todo"></i>待办</span>
       <span class="legend"><i class="lg t-study"></i>学习</span>
       <span class="legend"><i class="lg t-log"></i>记录</span>
-      <span class="legend"><i class="lg t-rem"></i>提醒</span>
       <span style="flex:1"></span>
-      <span style="font-size:12px;color:var(--text2)">👆 点击空白处记录 / 加提醒 · 红点线 = 现在</span>
+      <span style="font-size:12px;color:var(--text2)">👆 点击空白处记录 · 红点线 = 现在</span>
       <button class="btn small primary" data-act="log-now">✏️ 记录</button>
-      <button class="btn small" data-act="rem-now">⏰ 加提醒</button>
     </div>
     ${noTime ? `<div class="vtl-allday"><span class="vtl-ad-label">全天</span>${noTime}</div>` : ''}
     ${evHtml ? `<div class="vtl">
@@ -1330,59 +1296,6 @@ function renderStudy(){
     </div>
   </div>`;
 }
-/* ----- 提醒 ----- */
-function remFieldsHtml(t){
-  if (t === 'once') return `<input type="date" id="rem-date" value="${todayISO()}"><input type="time" id="rem-time">`;
-  if (t === 'daily') return `<input type="time" id="rem-time">`;
-  return `<select id="rem-interval"><option value="15">每 15 分钟</option><option value="30" selected>每 30 分钟</option><option value="45">每 45 分钟</option><option value="60">每 1 小时</option><option value="90">每 1.5 小时</option></select>`;
-}
-function renderReminders(){
-  const desc = r => r.type === 'once' ? `⏱ 一次 · ${r.date} ${r.time || ''}`
-    : r.type === 'daily' ? `🔁 每天 · ${r.time || ''}`
-    : `🔄 每 ${r.intervalMin || 30} 分钟`;
-  const list = [...S.reminders].sort((a, b) => {
-    const av = a.type === 'once' ? (a.date + ' ' + (a.time || '')) : (a.time || '');
-    const bv = b.type === 'once' ? (b.date + ' ' + (b.time || '')) : (b.time || '');
-    return av.localeCompare(bv);
-  });
-  const typeBtns = [['interval','🔄 间隔'],['daily','🔁 每天'],['once','⏱ 一次']];
-  $('#body-reminders').innerHTML = `
-  <div class="rem-msg">💡 提醒像苹果系统一样到点弹<b>系统通知</b> + 响铃：① 用 Chrome / Edge 打开本页并点一次「允许通知」② <b>页面保持开着</b>（放后台也能弹）③ iPhone：用 Safari 打开 → 「添加到主屏幕」→ iOS 16.4+ 支持系统通知。间隔提醒（每 N 分钟）只有本页有。</div>
-  <div class="card" style="margin-bottom:14px">
-    <div class="row">
-      <div class="seg">
-        ${typeBtns.map(([t, l]) => `<button class="${UI.remType === t ? 'sel' : ''}" data-act="rem-type" data-t="${t}">${l}</button>`).join('')}
-      </div>
-    </div>
-    <div class="row">
-      <input type="text" id="rem-text" class="grow" placeholder="提醒内容，如：放下手机，起来走走" data-enter="#btn-rem-add">
-      <span id="rem-fields">${remFieldsHtml(UI.remType)}</span>
-      <button class="btn primary" id="btn-rem-add" data-act="rem-add">＋ 添加提醒</button>
-    </div>
-    <div style="font-size:12.5px;color:var(--text2)">⚡ 一键添加（治手机依赖）：</div>
-    <div class="row" style="margin-top:6px">
-      <button class="btn small" data-act="rem-preset" data-min="30" data-text="📵 放下手机，起来活动一下">📵 每30分钟 · 放下手机</button>
-      <button class="btn small" data-act="rem-preset" data-min="45" data-text="👀 眼睛休息，远眺 5 分钟">👀 每45分钟 · 护眼</button>
-      <button class="btn small" data-act="rem-preset" data-min="60" data-text="💧 喝水">💧 每小时 · 喝水</button>
-      <button class="btn small" data-act="rem-preset" data-min="90" data-text="🧘 站起来拉伸一下">🧘 每90分钟 · 拉伸</button>
-    </div>
-  </div>
-  <div class="card">
-    <h3>📋 提醒列表（${S.reminders.length}）</h3>
-    ${list.length ? list.map(r => `
-      <div class="item">
-        <div class="chk ${r.enabled ? 'on' : ''}" data-act="rem-toggle" data-id="${r.id}" title="点击开关">${r.enabled ? '✓' : ''}</div>
-        <div class="grow"><div class="t" style="${r.enabled ? '' : 'color:var(--text2)'}">${esc(r.text)}</div><div class="meta"><span class="badge gray">${desc(r)}</span>${!r.enabled ? '<span class="badge danger">已关闭</span>' : ''}</div></div>
-        <button class="btn small ${notifyGranted() ? '' : 'primary'}" data-act="rem-test">🔔 测试</button>
-        <button class="del" data-act="rem-del" data-id="${r.id}">✕</button>
-      </div>`).join('')
-      : `<div class="empty"><span class="big">⏰</span>还没有提醒。先从上面的一键预设开始？</div>`}
-    <div class="row" style="margin-top:12px">
-      <button class="btn ${notifyGranted() ? 'ok' : 'primary'}" data-act="enable-notify">${notifyGranted() ? '✅ 桌面通知已开启' : '🔔 开启桌面通知'}</button>
-      <button class="btn" data-act="rem-test">🎵 测试响铃</button>
-    </div>
-  </div>`;
-}
 /* ----- 设置 ----- */
 function renderSettings(){
   const bg = S.settings.bg || {type:'none', value:'', overlay:0.5};
@@ -1562,41 +1475,24 @@ function finishPomo(skipped){
   renderStudy();
 }
 
-/* ================= 提醒引擎 ================= */
+/* ================= 提醒引擎（Reminder 到点提醒） ================= */
 function checkReminders(){
   const now = new Date();
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const today = todayISO();
   let changed = false;
-  S.reminders.forEach(r => {
-    if (!r.enabled) return;
-    if (r.type === 'once'){
-      if (r.date !== today || !r.time) return;
-      const [h, m] = r.time.split(':').map(Number);
-      const t = h * 60 + m;
-      if (nowMin >= t && nowMin - t < 2 && r.firedOn !== today + ' ' + r.time){
-        r.firedOn = today + ' ' + r.time; changed = true; fireReminder(r);
-      }
-    } else if (r.type === 'daily'){
-      if (!r.time) return;
-      const [h, m] = r.time.split(':').map(Number);
-      const t = h * 60 + m;
-      if (nowMin >= t && nowMin - t < 2 && r.firedOn !== today){
-        r.firedOn = today; changed = true; fireReminder(r);
-      }
-    } else if (r.type === 'interval'){
-      if (!r.lastFired){ r.lastFired = now.getTime(); changed = true; return; }
-      if (now.getTime() - r.lastFired >= (r.intervalMin || 30) * 60000){
-        r.lastFired = now.getTime(); changed = true; fireReminder(r);
-      }
+  S.todos.forEach(t => {
+    if (t.done || !t.time || t.date !== today) return;
+    const [h, m] = t.time.split(':').map(Number);
+    const tMin = h * 60 + m;
+    if (nowMin >= tMin && nowMin - tMin < 2 && t.reminded !== today){
+      t.reminded = today; changed = true;
+      fireNotify('✅ Reminder：' + t.text, '到点啦');
+      alertSound();
+      toast('✅ ' + t.text, 'warn');
     }
   });
-  if (changed) save();
-}
-function fireReminder(r){
-  fireNotify('⏰ ' + r.text, new Date().toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'}));
-  alertSound();
-  toast('⏰ ' + r.text, 'warn');
+  if (changed){ save(); renderDashboard(); renderTodos(); }
 }
 
 /* ================= 数据操作 ================= */
@@ -1658,28 +1554,6 @@ function addStudyMinutes(subj, minutes, note, time){
   S.studyLog.push({id: uid(), subj, minutes, date: todayISO(), note: note || '', time: time || new Date().toTimeString().slice(0, 5)});
   save();
 }
-function addReminder(){
-  const text = $('#rem-text').value.trim();
-  if (!text){ toast('请输入提醒内容', 'warn'); return; }
-  const r = {id: uid(), text, type: UI.remType, date: '', time: '', intervalMin: 30, enabled: true, firedOn: '', lastFired: 0};
-  if (UI.remType === 'once'){
-    r.date = $('#rem-date').value || todayISO();
-    r.time = $('#rem-time').value || '';
-    if (!r.time){ toast('请选择时间', 'warn'); return; }
-  } else if (UI.remType === 'daily'){
-    r.time = $('#rem-time').value || '';
-    if (!r.time){ toast('请选择时间', 'warn'); return; }
-  } else {
-    r.intervalMin = +$('#rem-interval').value || 30;
-    r.lastFired = 0;
-  }
-  S.reminders.push(r);
-  $('#rem-text').value = '';
-  save(); renderReminders();
-  toast('提醒已添加 ⏰');
-  if (!notifyGranted()) requestNotify();
-}
-
 /* ================= 云同步（GitHub Gist） ================= */
 function syncEnabled(){ return !!(Sync.token && Sync.gistId); }
 function syncAuthHeaders(){ return {'Authorization': 'Bearer ' + Sync.token, 'Accept': 'application/vnd.github+json'}; }
@@ -1834,16 +1708,6 @@ document.addEventListener('click', e => {
       openRecModal(actEl.dataset.date, pad(Math.floor(mins / 60)) + ':' + pad(mins % 60));
       break;
     }
-    case 'rec-mode': {
-      UI.recMode = actEl.dataset.m;
-      document.querySelectorAll('[data-act="rec-mode"]').forEach(b => b.classList.toggle('sel', b === actEl));
-      $('#rec-fields-log').style.display = UI.recMode === 'log' ? '' : 'none';
-      $('#rec-fields-rem').style.display = UI.recMode === 'rem' ? '' : 'none';
-      $('#rec-title').textContent = UI.recMode === 'log' ? '记录这个时间在做什么' : '给这个时间加个提醒';
-      $('#btn-rec-save').textContent = UI.recMode === 'log' ? '✓ 保存记录' : '⏰ 添加提醒';
-      $('#btn-rec-save').dataset.act = UI.recMode === 'log' ? 'log-add' : 'rem-add';
-      break;
-    }
     case 'rec-timer': {
       const t = UI.recTimer;
       if (t.running){
@@ -1884,8 +1748,17 @@ document.addEventListener('click', e => {
     }
     case 'ai-ask': aiAsk(); break;
     case 'log-now': openRecModal(todayISO()); break;
-    case 'rem-now': openRecModal(todayISO(), undefined, 'rem'); break;
-    case 'rec-cancel': closeRecModal(); break;
+    case 'log-edit': {
+      const l = (S.log || []).find(x => x.id === id);
+      if (!l) break;
+      UI.editLogId = id;
+      openRecModal(l.date, l.time);
+      $('#rec-time-end').value = endTime(l.time, l.dur);
+      $('#rec-text').value = l.text;
+      $('#rec-cat').value = l.cat || '临时事务';
+      break;
+    }
+    case 'rec-cancel': closeRecModal(); UI.editLogId = null; break;
     case 'log-add': {
       const text = $('#rec-text').value.trim();
       if (!text){ toast('写一下这段时间在做什么', 'warn'); return; }
@@ -1897,25 +1770,18 @@ document.addEventListener('click', e => {
         const [h2, m2] = end.split(':').map(Number);
         dur = Math.max(0, (h2 * 60 + m2) - (h1 * 60 + m1));
       }
-      if (!S.log) S.log = [];
-      S.log.push({id: uid(), date: UI.recDate || todayISO(), time, text, cat: $('#rec-cat').value || '临时事务', dur, createdAt: Date.now()});
+      if (UI.editLogId){
+        const l = (S.log || []).find(x => x.id === UI.editLogId);
+        if (l){ l.time = time; l.dur = dur; l.text = text; l.cat = $('#rec-cat').value || '临时事务'; }
+        UI.editLogId = null;
+        toast('已更新 🕐');
+      } else {
+        if (!S.log) S.log = [];
+        S.log.push({id: uid(), date: UI.recDate || todayISO(), time, text, cat: $('#rec-cat').value || '临时事务', dur, createdAt: Date.now()});
+        toast('已记录 🕐');
+      }
       closeRecModal();
       save(); renderDashboard(); renderPlan();
-      toast('已记录 🕐');
-      break;
-    }
-    case 'rem-add': {
-      const text = $('#rem-text').value.trim();
-      if (!text){ toast('写一下提醒内容', 'warn'); return; }
-      const time = $('#rem-time').value;
-      if (!time){ toast('选一个提醒时间', 'warn'); return; }
-      const repeat = $('#rem-repeat').value;
-      if (!S.reminders) S.reminders = [];
-      S.reminders.push({id: uid(), text, type: repeat === 'daily' ? 'daily' : 'once', date: repeat === 'daily' ? '' : (UI.recDate || todayISO()), time, intervalMin: 30, enabled: true, firedOn: '', lastFired: 0});
-      closeRecModal();
-      if (!notifyGranted() && notifySupported()) requestNotify();
-      save(); renderDashboard(); renderPlan(); renderReminders();
-      toast('提醒已添加 ⏰');
       break;
     }
     case 'log-del': {
@@ -1954,24 +1820,6 @@ document.addEventListener('click', e => {
     case 'pomo-start': pomoStart(); break;
     case 'pomo-reset': pomoReset(); break;
     case 'pomo-skip': pomoSkip(); break;
-
-    case 'rem-type': {
-      UI.remType = actEl.dataset.t;
-      document.querySelectorAll('[data-act="rem-type"]').forEach(b => b.classList.toggle('sel', b === actEl));
-      const fc = $('#rem-fields');
-      if (fc) fc.outerHTML = '<span id="rem-fields">' + remFieldsHtml(UI.remType) + '</span>';
-      break;
-    }
-    case 'rem-add': addReminder(); break;
-    case 'rem-toggle': { const r = S.reminders.find(x => x.id === id); if (r){ r.enabled = !r.enabled; if (r.enabled) r.lastFired = 0; save(); renderReminders(); renderDashboard(); renderPlan(); } break; }
-    case 'rem-del': { S.reminders = S.reminders.filter(x => x.id !== id); save(); renderReminders(); renderDashboard(); renderPlan(); break; }
-    case 'rem-preset': {
-      const text = actEl.dataset.text; const min = +actEl.dataset.min;
-      S.reminders.push({id: uid(), text, type: 'interval', date: '', time: '', intervalMin: min, enabled: true, firedOn: '', lastFired: Date.now()});
-      save(); renderReminders(); toast('已添加：' + text + '（每 ' + min + ' 分钟）'); break;
-    }
-    case 'rem-test': { alertSound(); fireNotify('🔔 提醒测试', '如果你能看到这条通知，提醒功能就绪！'); toast('🔔 已响铃' + (notifyGranted() ? ' + 桌面通知' : '（未开启桌面通知）'), 'ok'); break; }
-    case 'enable-notify': requestNotify(); break;
 
     case 'sync-enable': syncEnable(); break;
     case 'sync-now': { toast('正在同步…'); syncPull(false); if (Sync.dirty) syncPush(); break; }
