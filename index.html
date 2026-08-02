@@ -171,6 +171,11 @@ body.custom-text .vtl-ad-label,body.custom-text .legend{color:#677084}
 .goal-pill{padding:3px 10px;font-size:12px;border-radius:14px;border:1px solid var(--border);background:var(--card);color:var(--text2);cursor:pointer;transition:all .15s}
 .goal-pill:hover{border-color:var(--accent)}
 .goal-pill.sel{background:var(--accent);border-color:var(--accent);color:#fff}
+/* 总览补打卡圆点 */
+.bf-dot{width:25px;height:25px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:10.5px;color:var(--text2);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:background .15s}
+.bf-dot:hover{border-color:var(--ok)}
+.bf-dot.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.bf-link{color:var(--accent);cursor:pointer;font-size:12px}
 /* 本周时间分布 */
 .wkrev-cat{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
 .wkrev-cat .grow .progress{height:8px;margin-top:3px}
@@ -634,6 +639,7 @@ const UI = {
   todoFilter: 'open',
   remType: 'interval',
   editLogId: null,
+  bfOpen: {},
   pomo: {running:false, phase:'focus', total:25*60, left:25*60, cycles:0, subj:'', timer:null, startTime:0},
 };
 
@@ -714,10 +720,20 @@ function renderDashboard(){
     while (history[toISO(cur)]){ streak++; cur.setDate(cur.getDate() - 1); }
     const isDaily = goal >= 7;
     const done = wkCount >= goal;
+    const back7 = [];
+    for (let i = 6; i >= 0; i--){ const d = new Date(); d.setDate(d.getDate() - i); back7.push(toISO(d)); }
+    const bfHtml = UI.bfOpen[h.id] ? `
+      <div style="margin-top:7px;border-top:1px solid var(--border);padding-top:7px">
+        <div style="font-size:11.5px;color:var(--text2);margin-bottom:5px">补打卡（点圆点勾选/取消）：</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          ${back7.map(iso => `<button class="bf-dot ${history[iso] ? 'on' : ''}" data-act="habit-cell" data-id="${h.id}" data-date="${iso}" title="${iso}">${history[iso] ? '✓' : iso.slice(8)}</button>`).join('')}
+        </div>
+      </div>` : '';
     return `<div class="item ${checked ? 'done' : ''}" style="padding:7px 2px">
       <div class="chk ${checked ? 'on' : ''}" data-act="habit-cell" data-id="${h.id}" data-date="${today}">${checked ? '✓' : ''}</div>
       <div class="grow"><div class="t" style="font-size:14px">${esc(h.name)}</div>
-      <div class="meta">${isDaily ? '🔥 连续 ' + streak + ' 天' : '📆 本周 ' + wkCount + '/' + goal + (done ? ' 已达标 🎉' : ' · 还差 ' + (goal - wkCount) + ' 次')}</div></div>
+      <div class="meta">${isDaily ? '🔥 连续 ' + streak + ' 天' : '📆 本周 ' + wkCount + '/' + goal + (done ? ' 已达标 🎉' : ' · 还差 ' + (goal - wkCount) + ' 次')} · <span class="bf-link" data-act="habit-bf-toggle" data-id="${h.id}">${UI.bfOpen[h.id] ? '收起' : '补打卡'}</span></div></div>
+      ${bfHtml}
     </div>`;
   };
   const dailyH = S.habits.filter(h => (h.goal || 1) >= 7);
@@ -1147,7 +1163,7 @@ function renderHabits(){
     const cells = days.map(iso => {
       const on = !!history[iso];
       const isToday = iso === today;
-      return `<div class="hg-cell ${on ? 'on' : ''} ${isToday ? 'today' : ''}" title="${iso}${on ? ' ✓' : ''}" data-act="${isToday ? 'habit-cell' : ''}" data-id="${h.id}" data-date="${iso}">${isToday && !on ? '＋' : ''}</div>`;
+      return `<div class="hg-cell ${on ? 'on' : ''} ${isToday ? 'today' : ''}" title="${iso}${on ? ' ✓' : ''}${isToday ? '' : ' · 点我补打卡/取消'}" data-act="habit-cell" data-id="${h.id}" data-date="${iso}">${isToday && !on ? '＋' : ''}</div>`;
     }).join('');
     let streak = 0;
     const d0 = new Date(); if (!history[today]) d0.setDate(d0.getDate() - 1);
@@ -1889,7 +1905,19 @@ document.addEventListener('click', e => {
     case 'ledger-cat': UI.ledgerCat = actEl.dataset.c; document.querySelectorAll('#ledger-cats .cat-btn').forEach(b => b.classList.toggle('sel', b === actEl)); break;
     case 'ledger-del': { S.ledger = S.ledger.filter(x => x.id !== id); save(); renderLedger(); renderDashboard(); break; }
 
-    case 'habit-cell': { const h = S.habits.find(x => x.id === id); if (h){ h.history = h.history || {}; h.history[actEl.dataset.date] = !h.history[actEl.dataset.date]; save(); renderHabits(); renderDashboard(); toast(h.history[actEl.dataset.date] ? '打卡成功 🔥' : '已取消打卡', 'ok'); } break; }
+    case 'habit-bf-toggle': { UI.bfOpen[id] = !UI.bfOpen[id]; renderDashboard(); break; }
+    case 'habit-cell': {
+      const h = S.habits.find(x => x.id === id);
+      if (h){
+        h.history = h.history || {};
+        const iso = actEl.dataset.date;
+        h.history[iso] = !h.history[iso];
+        save(); renderHabits(); renderDashboard();
+        const isToday = iso === todayISO();
+        toast(h.history[iso] ? (isToday ? '打卡成功 🔥' : '补打卡成功 ✅ ' + iso.slice(5)) : (isToday ? '已取消打卡' : '已取消补打卡'), 'ok');
+      }
+      break;
+    }
     case 'habit-del': { if (confirm('删除习惯「' + (S.habits.find(x => x.id === id) || {}).name + '」？历史打卡记录也会删除')){ S.habits = S.habits.filter(x => x.id !== id); save(); renderHabits(); renderDashboard(); } break; }
 
     case 'subj-add': addSubject(); break;
