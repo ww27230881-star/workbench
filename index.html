@@ -1343,7 +1343,7 @@ function renderSettings(){
         </div>
       </div>
       <div class="row" style="margin-top:10px">
-        <button class="btn primary" data-act="sync-now">🔄 立即同步</button>
+        <button class="btn primary" data-act="sync-now">🔄 重新连接并同步</button>
         <button class="btn danger" data-act="sync-disable">🚫 关闭云同步</button>
         ${localStorage.getItem(LS_BACKUP) ? '<button class="btn" data-act="sync-restore">♻️ 恢复自动备份</button>' : ''}
       </div>`
@@ -1596,6 +1596,26 @@ async function syncPull(silent){
     if (!silent) toast('云同步拉取失败：' + e.message, 'error');
   }
 }
+async function syncReconnect(){
+  toast('正在重新连接云端…');
+  try{
+    const listRes = await fetch(GIST_API + '/gists?per_page=100', {headers: syncAuthHeaders()});
+    if (!listRes.ok) throw new Error('Token 无效或权限不足（HTTP ' + listRes.status + '）');
+    const gists = await listRes.json();
+    const found = gists.find(g => g.files && g.files[GIST_FILE]);
+    if (found){
+      Sync.gistId = found.id;
+      try{ localStorage.setItem(LS_SYNC_GIST, Sync.gistId); }catch(e){}
+      toast('已找到云端数据，正在拉取…');
+      await syncPull(false);
+    } else {
+      toast('这个账号下没找到同步文件：请确认手机和电脑用的是同一个 GitHub 账号的 Token', 'warn');
+    }
+  }catch(e){
+    toast('同步失败：' + e.message, 'error');
+  }
+  renderSettings();
+}
 async function syncEnable(){
   const token = $('#sync-token-input').value.trim();
   if (!token){ toast('请先粘贴 GitHub Token', 'warn'); return; }
@@ -1830,7 +1850,7 @@ document.addEventListener('click', e => {
       break;
     }
     case 'sync-enable': syncEnable(); break;
-    case 'sync-now': { toast('正在同步…'); syncPull(false); if (Sync.dirty) syncPush(); break; }
+    case 'sync-now': syncReconnect(); break;
     case 'sync-disable': {
       if (confirm('关闭云同步？本机数据保留，但不再自动推送 / 拉取。')){
         Sync.token = ''; Sync.gistId = '';
