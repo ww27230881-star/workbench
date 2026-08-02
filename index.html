@@ -1519,24 +1519,39 @@ function pomoSkip(){
   const p = UI.pomo;
   p.running = false;
   if (p.timer){ clearInterval(p.timer); p.timer = null; }
-  p.left = 0;
-  finishPomo();
+  finishPomo(true);
 }
-function finishPomo(){
+function finishPomo(skipped){
   const p = UI.pomo;
   p.running = false;
   if (p.timer){ clearInterval(p.timer); p.timer = null; }
   const wasFocus = p.phase === 'focus';
   alertSound();
   if (wasFocus){
-    fireNotify('🍅 专注完成', '干得漂亮！休息一下');
-    toast('🍅 专注完成，休息一下吧');
-    const mins = S.settings.pomodoro.focus;
-    const st = new Date(p.startTime || Date.now());
-    addStudyMinutes(p.subj || '专注', mins, '', pad(st.getHours()) + ':' + pad(st.getMinutes()));
-    p.cycles++;
-    p.phase = 'short';
-    p.total = S.settings.pomodoro.short * 60;
+    if (skipped){
+      // 跳过：只记实际经过的时长，不足 1 分钟不记录
+      const elapsed = Math.max(0, Math.round((Date.now() - (p.startTime || Date.now())) / 60000));
+      if (elapsed >= 1){
+        const st = new Date(p.startTime || Date.now());
+        addStudyMinutes(p.subj || '专注', elapsed, '', pad(st.getHours()) + ':' + pad(st.getMinutes()));
+      } else {
+        toast('本次专注不足 1 分钟，未记录');
+      }
+      fireNotify('⏹ 已跳过专注', '下次再战');
+      toast('已跳过本次专注 ⏹');
+      // 回到初始专注状态，不进入休息、不自动开始
+      p.phase = 'focus';
+      p.total = S.settings.pomodoro.focus * 60;
+    } else {
+      fireNotify('🍅 专注完成', '干得漂亮！休息一下');
+      toast('🍅 专注完成，休息一下吧');
+      const mins = S.settings.pomodoro.focus;
+      const st = new Date(p.startTime || Date.now());
+      addStudyMinutes(p.subj || '专注', mins, '', pad(st.getHours()) + ':' + pad(st.getMinutes()));
+      p.cycles++;
+      p.phase = 'short';
+      p.total = S.settings.pomodoro.short * 60;
+    }
   } else {
     fireNotify('☕ 休息结束', '该回来继续专注了');
     toast('☕ 休息结束，开始下一轮专注');
