@@ -345,6 +345,7 @@ input[type="month"]{width:160px}
     </div>
     <div id="rec-fields-timer" style="display:none">
       <div class="hint" style="margin-bottom:10px">⏱️ 从现在开始计时，做完点「结束」自动保存开始-结束时间段</div>
+      <div class="row" style="margin-bottom:8px"><span style="font-size:13px;color:var(--text2)">分类</span><select id="rec-cat-timer" style="flex:1"></select></div>
       <input type="text" id="rec-text-timer" class="grow" style="width:100%;margin-bottom:12px" placeholder="现在要做什么？如：背单词、写作业…" data-enter="#btn-rec-save">
     </div>
     <div id="rec-fields-log">
@@ -354,6 +355,7 @@ input[type="month"]{width:160px}
         <span style="font-size:13px;color:var(--text2)">结束</span>
         <input type="time" id="rec-time-end" style="width:110px">
       </div>
+      <div class="row" style="margin:8px 0"><span style="font-size:13px;color:var(--text2)">分类</span><select id="rec-cat" style="flex:1"></select></div>
       <input type="text" id="rec-text" class="grow" style="width:100%;margin-bottom:12px" placeholder="比如：背单词、打游戏、发呆…" data-enter="#btn-rec-save">
     </div>
     <div id="rec-fields-rem" style="display:none">
@@ -522,6 +524,28 @@ function load(){
   }
 }
 
+/* ================= 时间分类（苹果日历式） ================= */
+const TIME_CATS = [
+  {name: '自律', color: '#e05a5a'},
+  {name: '运动', color: '#2e9e5b'},
+  {name: '娱乐', color: '#9365e0'},
+  {name: '搞钱', color: '#d9a520'},
+  {name: '工作', color: '#3b82f6'},
+  {name: '临时事务', color: '#8a8f98'},
+];
+function catColor(cat){
+  const c = TIME_CATS.find(x => x.name === cat);
+  return c ? c.color : '#0ea5a4';
+}
+function catSelect(id, sel){
+  return `<select id="${id}" style="flex:1">${TIME_CATS.map(c => `<option value="${c.name}" ${c.name === (sel || '临时事务') ? 'selected' : ''}>${c.name}</option>`).join('')}</select>`;
+}
+function fillCatSelects(){
+  const opts = TIME_CATS.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+  const a = $('#rec-cat'), b = $('#rec-cat-timer');
+  if (a) a.innerHTML = opts;
+  if (b) b.innerHTML = opts;
+}
 /* ================= UI 状态 ================= */
 const UI = {
   tab: 'dashboard',
@@ -554,7 +578,7 @@ function dayEvents(date){
   (S.daily[date] || []).forEach(e => evts.push({time: e.time || '', text: e.text, type: 'plan', done: false, dur: 30}));
   S.todos.filter(t => t.date === date && t.time).forEach(t => evts.push({time: t.time, text: t.text, type: 'todo', done: t.done, dur: 30}));
   S.studyLog.filter(l => l.date === date).forEach(l => evts.push({time: l.time || '', text: l.subj + ' · ' + l.minutes + ' 分钟', type: 'study', done: false, dur: Math.max(20, l.minutes)}));
-  (S.log || []).filter(l => l.date === date).forEach(l => evts.push({time: l.time || '', text: l.text, type: 'log', done: false, dur: l.dur || 30, id: l.id}));
+  (S.log || []).filter(l => l.date === date).forEach(l => evts.push({time: l.time || '', text: l.text, cat: l.cat || '临时事务', type: 'log', done: false, dur: l.dur || 30, id: l.id}));
   S.reminders.filter(r => r.enabled && r.time && (r.type === 'daily' || (r.type === 'once' && r.date === date))).forEach(r => evts.push({time: r.time, text: '⏰ ' + r.text, type: 'rem', done: false, dur: 15, id: r.id}));
   return evts.sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
 }
@@ -597,7 +621,8 @@ function renderDashboard(){
       const top = ((h * 60 + m) / 1440 * 100).toFixed(2);
       const hgt = Math.max((e.dur || 30) / 1440 * 100, 3.2).toFixed(2);
       const tL = e.type === 'log' && e.dur ? esc(e.time) + '-' + esc(endTime(e.time, e.dur)) : esc(e.time);
-      return `<div class="wvtl-ev t-${e.type} ${e.done ? 'done' : ''}" style="top:${top}%;height:${hgt}%" title="${tL} ${esc(e.text)}"><span class="wvtl-et">${tL}</span>${esc(e.text)}${e.type === 'log' ? `<span class="ev-x" data-act="log-del" data-id="${e.id}">✕</span>` : ''}${e.type === 'rem' ? `<span class="ev-x" data-act="rem-del" data-id="${e.id}">✕</span>` : ''}</div>`;
+      const bColor = e.type === 'log' ? `border-left-color:${catColor(e.cat)};` : '';
+      return `<div class="wvtl-ev t-${e.type} ${e.done ? 'done' : ''}" style="top:${top}%;height:${hgt}%;${bColor}" title="${tL} ${esc(e.text)}"><span class="wvtl-et">${tL}</span>${esc(e.text)}${e.type === 'log' ? `<span class="ev-x" data-act="log-del" data-id="${e.id}">✕</span>` : ''}${e.type === 'rem' ? `<span class="ev-x" data-act="rem-del" data-id="${e.id}">✕</span>` : ''}</div>`;
     }).join('');
     const nowLine = isToday ? `<div class="wvtl-now" style="top:${(nowMin / 1440 * 100).toFixed(2)}%"></div>` : '';
     return `<div class="wvtl-col ${isToday ? 'today' : ''}" data-act="tl-record" data-date="${iso}"><div class="wvtl-cells">${cellHtml}</div><div class="wvtl-evs">${evHtml}</div>${nowLine}</div>`;
@@ -620,6 +645,7 @@ function renderDashboard(){
       <div class="chk ${t.done ? 'on' : ''}" data-act="todo-toggle" data-id="${t.id}">${t.done ? '✓' : ''}</div>
       <div class="grow"><div class="t" style="font-size:14px">${esc(t.text)}</div></div>
       ${t.time ? `<span class="badge gray">🕐 ${esc(t.time)}</span>` : ''}
+      <button class="btn small" data-act="todo-start-timer" data-id="${t.id}" title="用这条待办开始计时" style="padding:2px 6px">▶️</button>
       <button class="del" data-act="todo-del" data-id="${t.id}">✕</button>
     </div>`).join('');
   const remCount = S.reminders.filter(r => r.enabled).length;
@@ -637,6 +663,7 @@ function renderDashboard(){
           <div class="wvtl-body"><div class="wvtl-axis">${hourLabels}</div><div class="wvtl-cols">${wkCols}</div></div>
         </div>
         <div class="hint" style="margin-top:10px">👆 点击日历任意位置，记录那个时间在做什么 · ⏰ ${upcomingText}</div>
+    <div style="font-size:12px;color:var(--text2);margin-top:6px">🎨 分类：${TIME_CATS.map(c => `<i class="lg" style="background:${c.color};width:9px;height:9px;border-radius:50%;display:inline-block;vertical-align:-1px"></i> ${c.name}`).join(' ')}</div>
       </div>
     </div>
     <div class="dash-right">
@@ -813,7 +840,7 @@ function renderTimeline(date){
   plan.forEach(e => evts.push({time: e.time || '', text: e.text, type: 'plan', done: false, dur: 30}));
   todos.forEach(t => evts.push({time: t.time, text: t.text, type: 'todo', done: t.done, dur: 30}));
   study.forEach(l => evts.push({time: l.time || '', text: l.subj + ' · ' + l.minutes + ' 分钟', type: 'study', done: false, dur: Math.max(20, l.minutes)}));
-  (S.log || []).filter(l => l.date === date).forEach(l => evts.push({time: l.time || '', text: l.text, type: 'log', done: false, dur: l.dur || 30, id: l.id}));
+  (S.log || []).filter(l => l.date === date).forEach(l => evts.push({time: l.time || '', text: l.text, cat: l.cat || '临时事务', type: 'log', done: false, dur: l.dur || 30, id: l.id}));
   S.reminders.filter(r => r.enabled && r.time && (r.type === 'daily' || (r.type === 'once' && r.date === date))).forEach(r => evts.push({time: r.time, text: '⏰ ' + r.text, type: 'rem', done: false, dur: 15, id: r.id}));
   evts.sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
 
@@ -828,7 +855,8 @@ function renderTimeline(date){
     const top = (minOf(e.time) / 1440 * 100).toFixed(2);
     const hgt = Math.max((e.dur || 30) / 1440 * 100, 3.2).toFixed(2);
     const tL = e.type === 'log' && e.dur ? esc(e.time) + '-' + esc(endTime(e.time, e.dur)) : esc(e.time);
-    return `<div class="vtl-ev t-${e.type} ${e.done ? 'done' : ''}" style="top:${top}%;height:${hgt}%" title="${tL} ${esc(e.text)}">
+    const bColor = e.type === 'log' ? `border-left-color:${catColor(e.cat)};` : '';
+    return `<div class="vtl-ev t-${e.type} ${e.done ? 'done' : ''}" style="top:${top}%;height:${hgt}%;${bColor}" title="${tL} ${esc(e.text)}">
       <span class="vtl-etime">${tL}</span><span class="vtl-etxt">${esc(e.text)}</span>${e.type === 'log' ? `<span class="ev-x" data-act="log-del" data-id="${e.id}">✕</span>` : ''}${e.type === 'rem' ? `<span class="ev-x" data-act="rem-del" data-id="${e.id}">✕</span>` : ''}</div>`;
   }).join('');
   const noTime = evts.filter(e => !e.time).map(e => `<span class="badge gray" style="margin-right:6px">${e.type === 'plan' ? '🗓️' : e.type === 'todo' ? '✅' : e.type === 'log' ? '🕐' : '📖'} ${esc(e.text)}</span>`).join('');
@@ -838,6 +866,18 @@ function renderTimeline(date){
   const nowLine = date === today
     ? `<div class="vtl-now" style="top:${(nowMin / 1440 * 100).toFixed(2)}%"><span class="vtl-now-tag">现在 ${pad(now.getHours())}:${pad(now.getMinutes())}</span></div>`
     : '';
+
+  // 分类复盘（当天各分类耗时）
+  const catSum = {};
+  (S.log || []).filter(l => l.date === date && l.dur > 0).forEach(l => { const c = l.cat || '临时事务'; catSum[c] = (catSum[c] || 0) + l.dur; });
+  const catTotal = Object.keys(catSum).reduce((a, c) => a + catSum[c], 0);
+  const catHtml = catTotal > 0 ? `
+  <div class="card" style="margin-top:14px">
+    <h3>📊 分类复盘（${date}）</h3>
+    ${Object.keys(catSum).sort((a, b) => catSum[b] - catSum[a]).map(c => `
+      <div class="prow"><span class="pl"><i class="lg" style="background:${catColor(c)};width:9px;height:9px;border-radius:50%;display:inline-block"></i> ${esc(c)}</span><div class="progress"><div class="fill" style="width:${Math.min(100, catSum[c] / catTotal * 100)}%"></div></div><span class="pv">${(catSum[c] / 60).toFixed(1)}h</span></div>`).join('')}
+    <div class="hint">共 ${(catTotal / 60).toFixed(1)} 小时有记录</div>
+  </div>` : '';
 
   return `
   <div class="card" style="margin-bottom:14px">
@@ -877,7 +917,8 @@ function renderTimeline(date){
         ${nowLine}
       </div>
     </div>` : `<div class="empty" style="padding:36px"><span class="big">⏱️</span>这一天还没有带时间的记录<br><span style="font-size:13px;color:var(--text2)">点击上方空白时间轴任意位置，记录这个时间在做什么；或在总览的「今日待办」添加带时间的待办</span></div>`}
-  </div>`;
+  </div>
+  ${catHtml}`;
 }
 function renderWeeklyPlan(wk, today){
   const wkData = S.week[wk] || {goal: '', days: {}};
@@ -1606,9 +1647,9 @@ document.addEventListener('click', e => {
         // 结束并保存
         const dur = Math.max(1, Math.round((Date.now() - t.start) / 60000));
         const st = new Date(t.start);
-        S.log.push({id: uid(), date: t.date || todayISO(), time: pad(st.getHours()) + ':' + pad(st.getMinutes()), text: t.text, dur, createdAt: Date.now()});
+        S.log.push({id: uid(), date: t.date || todayISO(), time: pad(st.getHours()) + ':' + pad(st.getMinutes()), text: t.text, cat: t.cat || '临时事务', dur, createdAt: Date.now()});
         clearInterval(t.iv);
-        UI.recTimer = {running:false, start:0, date:'', text:'', iv:null};
+        UI.recTimer = {running:false, start:0, date:'', text:'', cat:'', iv:null};
         save(); renderDashboard(); renderPlan(); renderRecTimer();
         toast('已保存：' + t.text + '（' + dur + ' 分钟）⏱️');
       } else {
@@ -1616,11 +1657,23 @@ document.addEventListener('click', e => {
       }
       break;
     }
+    case 'todo-start-timer': {
+      const t = UI.recTimer;
+      if (t.running){ toast('已有计时进行中，先点「结束」', 'warn'); break; }
+      const todo = S.todos.find(x => x.id === id);
+      if (!todo) break;
+      const catMatch = TIME_CATS.find(c => c.name === todo.cat);
+      t.running = true; t.start = Date.now(); t.date = todayISO(); t.text = todo.text; t.cat = catMatch ? todo.cat : '临时事务';
+      t.iv = setInterval(renderRecTimer, 1000);
+      renderDashboard(); renderPlan(); renderRecTimer();
+      toast('计时开始 ⏱️ ' + todo.text);
+      break;
+    }
     case 'timer-start': {
       const text = $('#rec-text-timer').value.trim();
       if (!text){ toast('写一下要做什么', 'warn'); return; }
       const t = UI.recTimer;
-      t.running = true; t.start = Date.now(); t.date = todayISO(); t.text = text;
+      t.running = true; t.start = Date.now(); t.date = todayISO(); t.text = text; t.cat = $('#rec-cat-timer').value || '临时事务';
       t.iv = setInterval(renderRecTimer, 1000);
       closeRecModal();
       renderDashboard(); renderPlan(); renderRecTimer();
@@ -1642,7 +1695,7 @@ document.addEventListener('click', e => {
         dur = Math.max(0, (h2 * 60 + m2) - (h1 * 60 + m1));
       }
       if (!S.log) S.log = [];
-      S.log.push({id: uid(), date: UI.recDate || todayISO(), time, text, dur, createdAt: Date.now()});
+      S.log.push({id: uid(), date: UI.recDate || todayISO(), time, text, cat: $('#rec-cat').value || '临时事务', dur, createdAt: Date.now()});
       closeRecModal();
       save(); renderDashboard(); renderPlan();
       toast('已记录 🕐');
@@ -1958,6 +2011,7 @@ function tickClock(){
 }
 function init(){
   load();
+  fillCatSelects();
   if (S.settings.dark) setDark(true); else setDark(false);
   renderAll();
   tickClock();
