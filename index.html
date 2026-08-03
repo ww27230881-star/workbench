@@ -211,7 +211,9 @@ body.custom-text .vtl-ad-label,body.custom-text .legend{color:#677084}
 .dash-main{display:flex;gap:14px;align-items:stretch}
 .dash-left{flex:3;min-width:0}
 .dash-right{flex:1;min-width:0;display:flex;flex-direction:column;gap:14px}
-.dash-right .card{flex:1;display:flex;flex-direction:column;min-height:0}
+.dash-right .card{flex:1;display:flex;flex-direction:column;min-height:0;overflow-y:auto;scrollbar-width:thin}
+.dash-right .card::-webkit-scrollbar{width:5px}
+.dash-right .card::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 .dash-right .card > h3{flex-shrink:0}
 .dash-todo-list{flex:1;overflow-y:auto;min-height:0;margin-right:-6px;padding-right:6px}
 .dash-todo-list::-webkit-scrollbar{width:5px}
