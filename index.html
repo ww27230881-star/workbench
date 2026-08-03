@@ -914,6 +914,7 @@ function renderTodos(){
           ${t.date !== today ? `<span class="${overdue ? 'badge danger' : 'badge gray'}">${esc(t.date)}${overdue ? ' 已逾期' : ''}</span>` : todayTag}
         </div>
       </div>
+      <button class="btn small" data-act="todo-start-timer" data-id="${t.id}" title="用这条待办开始计时" style="padding:2px 6px">▶️</button>
       <button class="del" data-act="todo-del" data-id="${t.id}">✕</button>
     </div>`;
   }).join('');
