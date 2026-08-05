@@ -1026,6 +1026,13 @@ function renderTimeline(date){
       <button class="btn small" data-act="tl-day" data-d="0">今天</button>
       <span style="color:var(--text2);font-size:13px">${fmtDateCN(date)}</span>
     </div>
+    <div class="row" style="margin-top:8px;margin-bottom:0">
+      <span style="font-size:12.5px;color:var(--text2)">⏪ 补记以前的记录：</span>
+      <button class="btn small" data-act="tl-backfill" data-d="1">昨天</button>
+      <button class="btn small" data-act="tl-backfill" data-d="2">前天</button>
+      <button class="btn small" data-act="tl-backfill" data-d="3">3 天前</button>
+      <button class="btn small" data-act="tl-backfill" data-d="7">7 天前</button>
+    </div>
     <div class="row" style="margin-bottom:0">
       <span class="badge gray">🗓️ 安排 ${plan.length}</span>
       <span class="badge gray">✅ 待办 ${tDone}/${tAll}</span>
@@ -1965,6 +1972,14 @@ document.addEventListener('click', e => {
     }
 
     case 'plan-sub': UI.planSub = actEl.dataset.s; renderPlan(); break;
+    case 'tl-backfill': {
+      const d = new Date(); d.setDate(d.getDate() - (+actEl.dataset.d || 0));
+      const iso = toISO(d);
+      UI.tlDate = iso;
+      renderPlan();
+      toast('已切到 ' + fmtDateCN(iso) + '，点击时间轴空白处补记那天的记录');
+      break;
+    }
     case 'tl-day': {
       const off = +actEl.dataset.d;
       if (off === 0){ UI.tlDate = todayISO(); }
