@@ -643,6 +643,7 @@ const UI = {
   remType: 'interval',
   editLogId: null,
   bfOpen: {},
+  bfD: false,
   pomo: {running:false, phase:'focus', total:25*60, left:25*60, cycles:0, subj:'', timer:null, startTime:0},
 };
 
@@ -807,8 +808,16 @@ function renderDashboard(){
       <div class="card">
         <div class="row" style="justify-content:space-between;margin-bottom:8px">
           <h3 style="margin-bottom:0">📅 本周日历（${curWk.slice(5)} 起 · 第 ${dayOfWeek}/7 天）</h3>
-          <span style="font-size:12px;color:var(--text2);white-space:nowrap"><i class="lg t-plan"></i>安排 <i class="lg t-todo"></i>待办 <i class="lg t-study"></i>学习 <i class="lg t-log"></i>记录<button class="btn small primary" data-act="log-now" style="margin-left:10px">✏️ 记录</button></span>
+          <span style="font-size:12px;color:var(--text2);white-space:nowrap"><i class="lg t-plan"></i>安排 <i class="lg t-todo"></i>待办 <i class="lg t-study"></i>学习 <i class="lg t-log"></i>记录<button class="btn small primary" data-act="log-now" style="margin-left:10px">✏️ 记录</button><button class="btn small" data-act="dash-backfill" style="margin-left:6px">⏪ 补记</button></span>
         </div>
+        ${UI.bfD ? `<div class="row" style="margin-bottom:8px;flex-wrap:wrap">
+          <span style="font-size:12.5px;color:var(--text2)">补记到哪一天（点一下直接开记）：</span>
+          <button class="btn small" data-act="dash-bf-go" data-d="1">昨天</button>
+          <button class="btn small" data-act="dash-bf-go" data-d="2">前天</button>
+          <button class="btn small" data-act="dash-bf-go" data-d="3">3 天前</button>
+          <button class="btn small" data-act="dash-bf-go" data-d="7">7 天前</button>
+          <input type="date" id="dash-bf-date" data-act="dash-bf-date" style="width:auto;padding:4px 8px">
+        </div>` : ''}
         <div class="wvtl">
           <div class="wvtl-head"><div class="wvtl-axis-h"></div>${wkHead}</div>
           <div class="wvtl-body"><div class="wvtl-axis">${hourLabels}</div><div class="wvtl-cols">${wkCols}</div></div>
@@ -1823,6 +1832,14 @@ document.addEventListener('click', e => {
 
   switch (act){
     case 'habit-goal': { const h = S.habits.find(x => x.id === id); if (h){ h.goal = +actEl.dataset.g; save(); renderHabits(); renderDashboard(); toast('已改为' + (h.goal === 7 ? '每天打卡' : '每周 ' + h.goal + ' 次')); } break; }
+    case 'dash-backfill': { UI.bfD = !UI.bfD; renderDashboard(); break; }
+    case 'dash-bf-go': {
+      const d = new Date(); d.setDate(d.getDate() - (+actEl.dataset.d || 0));
+      UI.bfD = false;
+      openRecModal(toISO(d), new Date().toTimeString().slice(0, 5));
+      renderDashboard();
+      break;
+    }
     case 'todo-toggle': { const t = S.todos.find(x => x.id === id); if (t){ t.done = !t.done; save(); renderTodos(); renderDashboard(); } break; }
     case 'dash-todo-open': {
       $('#todo-new-text').value = '';
@@ -2187,6 +2204,10 @@ document.addEventListener('change', e => {
     }
     case 'tl-date': { UI.tlDate = el.value; renderPlan(); break; }
     case 'ledger-month': UI.ledgerMonth = el.value; renderLedger(); break;
+    case 'dash-bf-date': {
+      if (el.value){ UI.bfD = false; openRecModal(el.value, new Date().toTimeString().slice(0, 5)); renderDashboard(); }
+      break;
+    }
     case 'ledger-date': { UI.ledgerDate = el.value || todayISO(); renderLedger(); break; }
     case 'subj-target': { const s = S.subjects.find(x => x.id === el.dataset.id); if (s){ s.target = parseFloat(el.value) || 0; save(); renderStudy(); renderDashboard(); } break; }
     case 'pomo-subj': UI.pomo.subj = el.value; break;
